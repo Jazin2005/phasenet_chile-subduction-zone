@@ -39,7 +39,7 @@ def main(fname_cat, fname_inv):
     print('Wrote catalog to %s. (%i events)' % (fname_out, len(events)))
 
     # write catalogs per year
-    '''
+    
     year = events[0].origins[0].time.year
     year_events = []
     for event in events:
@@ -54,7 +54,6 @@ def main(fname_cat, fname_inv):
     catalog = Catalog(events=year_events)
     fname_out = '%i.xml' % year
     catalog.write(fname_out, format='QUAKEML')
-    '''
 
 def decrypt_event(lines, inv):
     """
@@ -144,7 +143,7 @@ if __name__ == '__main__':
 
     # manual pick file
     # this file should be changed from text to cnv
-    fname_cat = '/home/javak/Sample_data_chile/Convert_catalog_obspy/IPOC_picks_2012_01.cnv'
+    fname_cat = '/home/javak/Sample_data_chile/Convert_catalog_obspy/IPOC_2007_2020_picks.cnv'
 
     # stations
     fname_inv = '/home/javak/Sample_data_chile/Convert_catalog_obspy/stations.xml'

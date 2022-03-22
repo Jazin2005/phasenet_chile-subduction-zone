@@ -10,7 +10,7 @@ import pickle
 
 
 
-class Waves_Picker(object):
+class P_S_Picker(object):
 
     def __init__(self, phasenet_traj:'str', working_traj:'str', export_fig_path:'str', 
                 run_PhaseNet:'bool', dt:'int', starttime, fname_cat:'str', fname_inv:'str',
@@ -75,6 +75,7 @@ class Waves_Picker(object):
         file_name  = self.sort_file_name (file_name, stations)
 
         if self.run_PhaseNet==True: 
+            
             # Creates pandas DataFrame.
             data = {'P_waves':[],'S_waves':[]}
             df = pd.DataFrame(data, index =[])  
@@ -125,6 +126,8 @@ class Waves_Picker(object):
             else:
                 # Plot the PhaseNet result
                 self.plotting()
+
+    #def DF_path ()
 
     def save_DF (self, df_p_waves, df_s_waves, daily_data, df):
 
@@ -534,15 +537,15 @@ if __name__ == "__main__":
     phasenet_traj = '/home/javak/phasenet_chile-subduction-zone'
     working_traj = '/home/javak/Sample_data_chile'
     station_name_list = 'CXstatlist.txt'
-    starttime = obspy.UTCDateTime("2012-01-01T17:00:01.818393Z")
-    dt = 3600
+    starttime = obspy.UTCDateTime("2012-01-01T01:14:40.818393Z")
+    dt = 10
     fname_cat = "IPOC_picks_2012_01.xml"
     fname_inv = 'stations.xml'
     export_fig_path ='/home/javak/Sample_data_chile/Comparing PhaseNet and Catalog'
 
     run_PhaseNet = False
     events_DF = False
-    obj = Waves_Picker (phasenet_traj, working_traj, export_fig_path, run_PhaseNet, dt, 
+    obj = P_S_Picker (phasenet_traj, working_traj, export_fig_path, run_PhaseNet, dt, 
             starttime,fname_cat,fname_inv,events_DF, station_name_list)
     v = obj()
     print(v)
