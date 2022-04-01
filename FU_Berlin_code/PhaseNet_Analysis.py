@@ -23,7 +23,8 @@ class PhaseNet_Analysis (object):
     def __init__(self,phasenet_direc: 'str', chile_GFZ_online_direc:'str', export_DF_path:'str',
                 export_mseed_path:'str', working_direc:'str', picks_name:'str',
                 start_year_analysis:'int', start_day_analysis:'int', 
-                end_year_analysis:'int', end_day_analysis:'int', analysis:'bool'):
+                end_year_analysis:'int', end_day_analysis:'int', analysis:'bool', time_lag_threshold:'int',
+                station_name_list:'str'):
 
         '''
         Parameters initialization:
@@ -72,6 +73,8 @@ class PhaseNet_Analysis (object):
             - time_lag_threshold (int) : Proper time lag threshold in millisecond.
                                         This variable has been use to perform qaulity control of PhaseNet and existing catalog.
 
+            - station_name_list: the name of selected station stored in the text file
+
         '''
         os.chdir('{0}'.format(phasenet_direc))
         self.PROJECT_ROOT = os.getcwd()
@@ -87,6 +90,7 @@ class PhaseNet_Analysis (object):
         self.end_day_analysis = end_day_analysis
         self.analysis = analysis
         self.time_lag_threshold = time_lag_threshold
+        self.station_name_list = station_name_list
     
     def __call__ (self):
 
@@ -266,7 +270,7 @@ class PhaseNet_Analysis (object):
     
     def run_phasenet (self):
         '''
-        Run the predefined PhaseNet model (model/190703-214543) to pick S and P waves.
+        Run the predefined PhaseNet model (model/190703-214543) to pick S and P .
         '''
         #cmd = '/home/javak/miniconda3/envs/phasenet/bin/python phasenet/predict.py --model=model/190703-214543 --data_list=/home/javak/Sample_data_chile/mseed.csv --data_dir=/home/javak/Sample_data_chile/mseed --format=mseed --plot_figure'.split()
         cmd = '/home/javak/miniconda3/envs/phasenet/bin/python phasenet/predict.py --model=model/190703-214543 --data_list=/home/javak/Sample_data_chile/mseed.csv --data_dir=/home/javak/Sample_data_chile/mseed --format=mseed'.split()
@@ -577,6 +581,369 @@ class PhaseNet_Analysis (object):
             plt.title(title_name, fontsize=21)
             file_name = '{0}{1}.{extention}'.format('PhaseNet_result_S_bins: ',round (bins_lag[j]), extention='png')
             fig.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+    
+    def mismatched_picks (self, start_time, dt):
+
+        '''
+        This function plot the PhaseNet picks which are mismatched with picks in Catalog.
+        Parameters:
+                - dt(int): delta time in second. example: 7000
+                - start_time: start time. example: obspy.UTCDateTime("2020-12-31T08:19:57.480000Z")
+        '''
+        # load all picks in Catalog and PhaseNet
+
+        # catalog_DF_P_picks, df_P_picks
+        with open(os.path.join(self.export_DF_path, "PhaseNet_result_p_picks.pkl"),'rb') as fp:
+            df_P_picks = pickle.load(fp)
+
+        with open(os.path.join(self.export_DF_path, "catalog_p_picks.pkl"),'rb') as fp:
+            catalog_DF_P_picks = pickle.load(fp)
+
+        # catalog_DF_P_picks, df_P_picks
+        with open(os.path.join(self.export_DF_path, "PhaseNet_result_s_picks.pkl"),'rb') as fp:
+            df_S_picks = pickle.load(fp)
+
+        with open(os.path.join(self.export_DF_path, "catalog_s_picks.pkl"),'rb') as fp:
+            catalog_DF_S_picks = pickle.load(fp)
+
+        
+        # load DF_auxiliary_path_file.pkl
+        with open(os.path.join(self.export_DF_path, "DF_auxiliary_path_file.pkl"),'rb') as fp:
+            DF_auxiliary_path_file = pickle.load(fp)
+
+        # load DF_selected_chile_path_file.pkl
+        with open(os.path.join(self.export_DF_path, "DF_selected_chile_path_file.pkl"),'rb') as fp:
+            DF_selected_chile_path_file = pickle.load(fp)
+
+        
+        # Path of all streams
+        stream_traj = DF_selected_chile_path_file["path"].values.tolist()
+
+        # convert stream_traj to data frame
+        df_stream_traj = pd.DataFrame({'stream_traj': stream_traj})
+
+        # creat year and day columns for filtering
+        df_stream_traj[['rest','year', 'day']] = df_stream_traj['stream_traj'].str.rsplit('.', 2, expand=True)
+
+        # convert columns to int
+        df_stream_traj['year'] = df_stream_traj['year'].astype('int')
+        df_stream_traj['day'] = df_stream_traj['day'].astype('int')
+
+        # drop the column
+        df_stream_traj = df_stream_traj.drop(['rest'], axis=1)
+        df_stream_traj = df_stream_traj[(df_stream_traj['year']>= self.start_year_analysis) & (df_stream_traj['year']<= self.end_year_analysis)]
+
+        df_stream_traj = df_stream_traj[(df_stream_traj['day']>= self.start_day_analysis) & (df_stream_traj['day']<= self.end_day_analysis)]  
+
+        df_stream_traj = self.filter_year_day (df_stream_traj)
+
+        stations = self.get_stations ()
+
+        stations = self.sort_stations_latitude(stations)
+
+        # Filter df_stream_traj based on the stations dataframe
+        df_stream_traj = self.filter_network_station(df_stream_traj, stations)
+
+        # convert stream directory to a list
+        stream_traj = df_stream_traj['stream_traj'].tolist()
+
+        # Read and slice data from Obspy
+        stream = [self.data_slicing (start_time, dt, t) for t in stream_traj]
+
+        # Apply filter
+        stream = [self.apply_filter (k) for k in stream]
+
+
+        # Read pickle data (PhaseNet result picks)
+        #with open(os.path.join(self.export_fig_path, "result_PhaseNet.pkl"),'rb') as fp:
+        #    PhaseNet_result = pickle.load(fp)
+
+        # Read the events 
+        #with open(os.path.join(self.export_fig_path, "events.pkl"),'rb') as fp:
+        #    events = pickle.load(fp)
+        #events
+
+        # creat a new column named network_station
+        #events['network_station']=events['network_code'].astype(str)+'.'+events['station_code']
+        # Remove streams which are empty
+
+        catalog_DF_P_picks['network_station']=catalog_DF_P_picks['network_code'].astype(str)+'.'+catalog_DF_P_picks['station_code']
+
+        fig, ax = plt.subplots(df_P_picks.shape[0]*3,1,figsize=(40,90),constrained_layout = True)
+
+        for i in range (0,PhaseNet_result.shape[0]):
+            #stream = obspy.read(stream_traj[i])
+
+            #stream = self.data_slicing (self.starttime, self.dt, stream)
+            #stream = self.apply_filter (stream)
+            #print(stream)
+            st = stream[i]
+
+            # make sure the events between start time and end time
+            print(st[0].stats.endtime)
+            df_sub = events[(events['picks_time']> st[0].stats.starttime) & (events['picks_time']< st[0].stats.endtime)]           
+            
+            # make sure the PhaseNet picks time are between start time and end time
+            df_phasenet_p = PhaseNet_result.P_waves[i][(PhaseNet_result.P_waves[i]['timestamp']> st[0].stats.starttime) & (PhaseNet_result.P_waves[i]['timestamp']< st[0].stats.endtime)]
+            df_phasenet_s = PhaseNet_result.S_waves[i][(PhaseNet_result.S_waves[i]['timestamp']> st[0].stats.starttime) & (PhaseNet_result.S_waves[i]['timestamp']< st[0].stats.endtime)]
+
+
+            # filter station and P picks
+            df_sub_p = df_sub[(df_sub['network_station']==PhaseNet_result.index[i][0:7]) & (df_sub['phase_hint']=="P")]
+
+            # filter station and S picks
+            df_sub_s = df_sub[(df_sub['network_station']==PhaseNet_result.index[i][0:7]) & (df_sub['phase_hint']=="S")]
+
+            ax[3*i].set_title(fontsize=25,label="Station: {}".format(PhaseNet_result.index[i]), fontdict=None, loc='center')
+            ax[3*i].plot(st[0].times('matplotlib'), st[0].data, 
+                        markersize=1, label = 'E Stream', color = 'k')
+            ax[3*i+1].plot(st[1].times('matplotlib'), st[1].data,
+                        markersize=1, label = 'N Stream', color = 'k')
+            ax[3*i+2].plot(st[2].times('matplotlib'), st[2].data,
+                        markersize=1, label = 'Z Stream', color = 'k')
+
+            
+            plt.setp(ax[3*i].get_xticklabels(), visible=False)
+            plt.setp(ax[3*i+1].get_xticklabels(), visible=False)
+
+            
+            # Draw P Picks imported from catalog
+
+            ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_sub_p['picks_time'].tolist()], 
+                ymin = (-st[0].max()),
+                ymax = (st[0].max()),
+                color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
+            ax[3*i].xaxis_date()
+
+            ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_sub_p['picks_time'].tolist()], 
+                ymin = (-st[1].max()),
+                ymax = (st[1].max()),
+                color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
+            ax[3*i+1].xaxis_date()
+
+            
+            ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_sub_p['picks_time'].tolist()], 
+                ymin = (-st[2].max()),
+                ymax = (st[2].max()),
+                color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
+            ax[3*i+2].xaxis_date()  
+
+            # Draw S Picks imported from catalog           
+            ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_sub_s['picks_time'].tolist()], 
+                ymin = (-st[0].max()),
+                ymax = (st[0].max()),
+                color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
+            ax[3*i].xaxis_date()
+
+            ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_sub_s['picks_time'].tolist()], 
+                ymin = (-st[1].max()),
+                ymax = (st[1].max()),
+                color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
+            ax[3*i+1].xaxis_date()
+
+            
+            ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_sub_s['picks_time'].tolist()], 
+                ymin = (-st[2].max()),
+                ymax = (st[2].max()),
+                color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
+            ax[3*i+2].xaxis_date() 
+            
+            # Draw P waves imported from PhaseNet
+
+            ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_phasenet_p['timestamp']], 
+                ymin = (-st[0].max()*np.array (df_phasenet_p['prob'])).tolist(),
+                ymax = (st[0].max()*np.array (df_phasenet_p['prob'])).tolist(),
+                color='b', linestyle='solid', label = 'P picks by PhaseNet', alpha=0.6)
+            ax[3*i].xaxis_date()
+
+            ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_phasenet_p['timestamp']], 
+                ymin = (-st[1].max()*np.array (df_phasenet_p['prob'])).tolist(),
+                ymax = ( st[1].max()*np.array (df_phasenet_p['prob'])).tolist(),
+                color='b', linestyle='solid', label = 'P picks by PhaseNet', alpha=0.6)
+            ax[3*i+1].xaxis_date()
+
+            ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_phasenet_p['timestamp']], 
+                ymin = (-st[2].max()*np.array (df_phasenet_p['prob'])).tolist(),
+                ymax = ( st[2].max()*np.array (df_phasenet_p['prob'])).tolist(),
+                color='b', linestyle='solid', label = 'P picks by PhaseNet', alpha=0.6)
+            ax[3*i+2].xaxis_date()
+
+
+            
+            # Draw S waves imported from PhaseNet
+            ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_phasenet_s['timestamp']], 
+                ymin = (-st[0].max()*np.array (df_phasenet_s['prob'])).tolist(),
+                ymax = ( st[0].max()*np.array (df_phasenet_s['prob'])).tolist(),
+                color='r', linestyle='solid', label = 'S picks by PhaseNet', alpha=0.6)
+            ax[3*i].xaxis_date()
+
+            ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_phasenet_s['timestamp']], 
+                ymin = (-st[1].max()*np.array (df_phasenet_s['prob'])).tolist(),
+                ymax = ( st[1].max()*np.array (df_phasenet_s['prob'])).tolist(),
+                color='r', linestyle='solid', label = 'S picks by PhaseNet', alpha=0.6)
+            ax[3*i+1].xaxis_date()
+
+            ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in df_phasenet_s['timestamp']], 
+                ymin = (-st[2].max()*np.array (df_phasenet_s['prob'])).tolist(),
+                ymax = ( st[2].max()*np.array (df_phasenet_s['prob'])).tolist(),
+                color='r', linestyle='solid', label = 'S picks by PhaseNet', alpha=0.6)
+            ax[3*i+2].xaxis_date()
+            
+
+            ax[3*i].legend(loc='lower right')
+            ax[3*i+1].legend(loc='lower right')
+            ax[3*i+2].legend(loc='lower right')
+        file_name = '{0}{1}.{extention}'.format('PhaseNet_result_',self.starttime, extention='png')
+        fig.savefig(os.path.join(self.export_fig_path, file_name), facecolor = 'w')
+
+        
+
+        return DF_selected_chile_path_file
+        
+
+    def apply_filter (self, stream):
+
+        '''
+        Filter the data of all traces in the Stream. This can just support "bandpass" filter.
+        Parameters:
+                    - stream: obspy stream data
+                    - freqmin: minimum frequency
+                    - freqmax: maximum frequency
+        Return:
+                    - filtred stream
+        '''
+        #sliced_stream = stream.filter('bandpass', freqmin= 1, freqmax=20)
+        print(stream)
+        stream.filter('bandpass', freqmin= 1, freqmax=20)
+        stream.filter('bandpass', freqmin= 1, freqmax=20)
+        stream.filter('bandpass', freqmin= 1, freqmax=20)
+        
+        return stream
+
+    def data_slicing (self, starttime, dt, daily_data):
+        '''
+        Perform Slicing on stream.
+            Parameters:
+                        - starttime (str): start time for slicing (like 2020-12-31T12:30:58.180000Z)
+                        - dt (int): time interval for sclicing
+                        - daily_data (str): The name of daily mseed file ( like CX.PB06..HHZ.D.2020.366)
+            
+            return:
+                    - sliced_stream: obspy stream data
+        '''
+        start=obspy.UTCDateTime(starttime)
+        sliced_stream = self.read_data (daily_data).slice (start,start+dt)
+        return sliced_stream
+
+    def read_data (self, daily_data):
+        '''
+        Read the mseed daily data and return stream.
+            Parameters:
+                - daily_data (str): The name of daily mseed file ( like CX.PB06..HHZ.D.2020.366)
+            return:
+                    - stream: obspy stream data
+        '''
+        stream = obspy.read(os.path.join(self.working_direc, 'mseed', '{0}'.format(daily_data)), sep="\t")
+        return stream
+    
+    def write_mseed (self,df_stream_traj):
+        
+        '''
+        This function write mseed files on mseed folder & write the name of these files on csv files.
+                    Parameters:
+                                df_stream_traj (data frame): Directory of mseed files
+        '''
+
+        #for i in range (df_stream_traj.shape[0]):
+        while df_stream_traj.shape[0] !=0:
+
+            streamZ = obspy.read(df_stream_traj.stream_traj.iloc[i][0])
+            streamN = obspy.read(df_stream_traj.stream_traj.iloc[i][1])
+            streamE = obspy.read(df_stream_traj.stream_traj.iloc[i][2])
+            streamN += streamE
+            streamN += streamZ
+            stream = streamN.sort()
+            #stream.write(os.path.join(CATALOG_ROOT, "mseed/CARS/CX.PB01..NEZ.HH.D.2020.366"), sep="\t", format="MSEED")
+    
+    def filter_year_day (self, df_stream_traj):
+
+        '''
+        This function filter df_stream_traj based on the given year and day
+            Parameters:
+                       df_stream_traj (datafarme): file directory 
+        '''
+        # extract file name
+        df_stream_traj[['rest','file_name']] = df_stream_traj['stream_traj'].str.rsplit('/', 1, expand=True)
+
+        df_stream_traj[['rest','component']] = df_stream_traj['rest'].str.rsplit('/', 1, expand=True)
+
+        # extract station
+        df_stream_traj[['rest','station_code']] = df_stream_traj['rest'].str.rsplit('/', 1, expand=True)
+
+        # extract network
+        df_stream_traj[['rest','network_code']] = df_stream_traj['rest'].str.rsplit('/', 1, expand=True)
+
+        # drop the "rest" column
+        df_stream_traj = df_stream_traj.drop(['rest','component'], axis=1)
+        
+        DF_file_name = df_stream_traj["file_name"].str.replace(".","")
+        DF_file_name = DF_file_name.str.replace("HHN","")
+        DF_file_name = DF_file_name.str.replace("HHE","")
+        DF_file_name = DF_file_name.str.replace("HHZ","")
+
+        df_stream_traj["file_name"] = DF_file_name
+        
+        return df_stream_traj
+    
+
+    def get_stations (self):
+        '''
+        Return the list of stations stored in station_name_list
+        
+        Return:
+            - stations (list): The list of stations
+        '''
+        stations = pd.read_csv(os.path.join(self.working_direc, self.station_name_list), sep="\t")
+        return stations
+    
+    def sort_stations_latitude(self,stations):
+        '''
+        Sort station based on latidude.
+            Parameters:
+                        stations (DataFrame): This data frame contains at least two culomns (station name and corespondinglatidude)
+        '''
+
+        return stations.sort_values("latidude", ascending=False)
+    
+    
+    def sort_stations_longitude(self,stations):
+
+        '''
+        Sort station based on longitude.
+            Parameters:
+                        stations (DataFrame): This data frame contains at least two culomns (station name and coresponding longitude)
+        '''
+
+        return stations.sort_values("longitude", ascending=False)
+        
+    
+    def filter_network_station(self,df_stream_traj, stations):
+        '''
+        This function filter df_stream_traj dataframe based on station code according to the statlist.txt file.
+                Parameters:
+                            - df_stream_traj (DF): file directory data frame
+                            - stations (DF): stations data frame
+        '''
+        df_stream_traj = df_stream_traj[df_stream_traj.station_code.isin(stations.station_code)]
+
+        return df_stream_traj
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
 
@@ -590,14 +957,19 @@ if __name__ == "__main__":
     start_year_analysis = 2012
     start_day_analysis = 1
     end_year_analysis = 2012
-    end_day_analysis = 31
+    end_day_analysis = 1
     analysis = False
     time_lag_threshold = 2000
+
+    station_name_list = 'CXstatlist.txt'
 
     obj = PhaseNet_Analysis (phasenet_direc,chile_GFZ_online_direc,export_DF_path, 
                             export_mseed_path, working_direc, picks_name, 
                             start_year_analysis, start_day_analysis,
-                            end_year_analysis, end_day_analysis, analysis, time_lag_threshold)
+                            end_year_analysis, end_day_analysis, analysis, time_lag_threshold, station_name_list)
     
-    #result = obj.compare_PhaseNet_catalog_P_picks()
-    result = obj()
+    
+    start_time = obspy.UTCDateTime("2012-01-01T01:14:40.818393Z")
+    dt = 10
+    result = obj.mismatched_picks(start_time,dt)
+    #result = obj.get_stations()
