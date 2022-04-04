@@ -1,4 +1,3 @@
-from matplotlib.pyplot import axis
 import pandas as pd
 import numpy as np
 import os
@@ -7,11 +6,8 @@ import obspy
 from subprocess import call
 import json
 import datetime
-from scipy.spatial import distance
 from scipy.spatial import distance_matrix
 import matplotlib.pyplot as plt
-
-
 
 class PhaseNet_Analysis (object):
 
@@ -221,8 +217,8 @@ class PhaseNet_Analysis (object):
         df_counter.to_pickle(os.path.join(self.export_DF_path , 'DF_auxiliary_path_file.pkl'))
 
     
-    def three_components_mseed_maker (self,i:'int',DF_auxiliary_path_file, 
-                                    DF_selected_chile_path_file):
+    def three_components_mseed_maker (self,i:'int',DF_auxiliary_path_file:'pd.DataFrame', 
+                                    DF_selected_chile_path_file: 'pd.DataFrame'):
         '''
         This function write a single three components mseed file in mseed folder.
         Parameters:
@@ -232,8 +228,6 @@ class PhaseNet_Analysis (object):
                     - DF_selected_chile_path_file(data frame): A selected data frame based on the given time interval.
                     
         '''
-
-
 
         # Apply filter to determine the three components in "DF_selected_chile_path_file"
         df = DF_selected_chile_path_file[['network', 'station', 'year','day']]==DF_auxiliary_path_file.iloc[i]
@@ -256,7 +250,7 @@ class PhaseNet_Analysis (object):
 
         return mseed_name
 
-    def write_mseed_names(self, mseed_name):
+    def write_mseed_names(self, mseed_name:'str') -> None:
         '''
         This function write the name of mseed file to mseed.csv.
         This mseed.csv will be used by PhaseNet
@@ -265,7 +259,7 @@ class PhaseNet_Analysis (object):
 
         df.to_csv((os.path.join(self.working_direc, 'mseed.csv')),index=False)
     
-    def run_phasenet (self):
+    def run_phasenet (self) -> None:
         '''
         Run the predefined PhaseNet model (model/190703-214543) to pick S and P .
         '''
@@ -278,6 +272,11 @@ class PhaseNet_Analysis (object):
 
         '''
         Read the csv file of PhaseNet output and return the P picks and S picks.
+
+            Output:
+                    - df_p_picks (dataframe): Phasenet P picks dataframe
+                    - df_s_picks (dataframe): PhaseNet S picks dataframe
+            
         '''
         picks_csv = pd.read_csv(os.path.join(self.PROJECT_ROOT, "results/picks.csv"), sep="\t")
         picks_csv.loc[:, 'p_idx'] = picks_csv["p_idx"].apply(lambda x: x.strip("[]").split(","))
@@ -294,7 +293,7 @@ class PhaseNet_Analysis (object):
 
         return df_p_picks, df_s_picks
     
-    def remove_mseed (self,mseed_name):
+    def remove_mseed (self,mseed_name:'str') -> pd.DataFrame:
 
         '''
         This function removes created mseed in mseed folder to free up memory.
@@ -314,12 +313,16 @@ class PhaseNet_Analysis (object):
         df_total = df.append(df_new)
         return df_total
     
-    def filter_picks_DF (self):
+    def filter_picks_DF (self)-> tuple:
 
         '''
         This function apply filter on existing picks DataFrame according to 
         start_year_analysis, end_year_analysis, start_day_analysis, end_day_analysis.
-        '''
+
+            Output:
+                    - catalog_DF_P_picks (dataframe): catalog P picks dataframe
+                    - catalog_DF_S_picks (dataframe): catalog S picks dataframe
+            '''
         # load picks_2007_2020.pkl
         with open(os.path.join(self.export_DF_path, self.picks_name),'rb') as fp:
             DF_picks = pickle.load(fp)
@@ -342,9 +345,6 @@ class PhaseNet_Analysis (object):
 
         '''
         This function compares the result of PhaseNet and existing catalog.
-        Parameters:
-                    - catalog_DF_P_picks   (DataFrame): catalog P picks
-                    - df_P_picks           (DataFrame): PhaseNet P picks
         '''
         
         # catalog_DF_P_picks, df_P_picks
@@ -463,9 +463,6 @@ class PhaseNet_Analysis (object):
 
         '''
         This function compares the result of PhaseNet and existing catalog.
-        Parameters:
-                    - catalog_DF_S_picks   (DataFrame): catalog S picks
-                    - df_S_picks           (DataFrame): PhaseNet S picks
         '''
 
         # catalog_DF_P_picks, df_P_picks
@@ -579,7 +576,7 @@ class PhaseNet_Analysis (object):
             file_name = '{0}{1}.{extention}'.format('PhaseNet_result_S_bins: ',round (bins_lag[j]), extention='png')
             fig.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
     
-    def mismatched_picks (self, start_time, dt)-> pd.DataFrame:
+    def mismatched_picks (self, start_time:'str', dt:'int')-> pd.DataFrame:
 
         '''
         This function plot the PhaseNet picks which are mismatched with picks in Catalog.
@@ -783,7 +780,7 @@ class PhaseNet_Analysis (object):
         print (st[0].stats.endtime)
         
 
-    def apply_filter (self, stream):
+    def apply_filter (self, stream:'obspy') -> obspy:
 
         '''
         Filter the data of all traces in the Stream. This can just support "bandpass" filter.
@@ -802,7 +799,7 @@ class PhaseNet_Analysis (object):
         
         return stream
 
-    def data_slicing (self, starttime, dt, daily_data):
+    def data_slicing (self, starttime:'str', dt:'int', daily_data:'str') -> obspy:
         '''
         Perform Slicing on stream.
             Parameters:
@@ -817,7 +814,7 @@ class PhaseNet_Analysis (object):
         sliced_stream = self.read_data (daily_data).slice (start,start+dt)
         return sliced_stream
 
-    def read_data (self, daily_data):
+    def read_data (self, daily_data:'str') -> obspy:
         '''
         Read the mseed daily data and return stream.
             Parameters:
@@ -899,7 +896,7 @@ class PhaseNet_Analysis (object):
 
         return df_stream_traj
 
-    def filter_year_day (self, df_stream_traj):
+    def filter_year_day (self, df_stream_traj: 'pd.DataFrame') -> pd.DataFrame:
 
         '''
         This function filter df_stream_traj based on the given year and day
@@ -945,7 +942,7 @@ class PhaseNet_Analysis (object):
         return stations
     
 
-    def sort_stations_latitude(self,stations) -> pd.DataFrame:
+    def sort_stations_latitude(self,stations:'pd.DataFrame') -> pd.DataFrame:
         '''
         Sort station based on the latidude.
             Parameters:
@@ -961,7 +958,7 @@ class PhaseNet_Analysis (object):
         return stations.sort_values("latidude", ascending=False)
     
     
-    def sort_stations_longitude(self,stations):
+    def sort_stations_longitude(self,stations:'pd.DataFrame') -> pd.DataFrame:
 
         '''
         Sort station based on longitude.
@@ -999,7 +996,8 @@ class PhaseNet_Analysis (object):
 
         return df_stream_traj
     
-    def filter_date (self, catalog_DF,start_time,dt):
+    def filter_date (self, catalog_DF:'pd.DataFrame',start_time:'str',dt:'int') -> pd.DataFrame:
+
         '''
         This function filter events of catalogs based on the given interval for visualization.
 
@@ -1035,7 +1033,7 @@ class PhaseNet_Analysis (object):
 
         return catalog_DF
     
-    def DF_sort_station (self,dataframe, sorted_station_DF) -> pd.DataFrame:
+    def DF_sort_station (self,dataframe:'pd.DataFrame', sorted_station_DF:'pd.DataFrame') -> pd.DataFrame:
         '''
         This function sort the order of stations information based on the sorted_station_DF dataframe.
 
@@ -1198,11 +1196,6 @@ class PhaseNet_Analysis (object):
             mis_match_catalog_DF = pd.concat([mis_match_catalog_DF, catalog_filter_station], axis=0)
     
         return mis_match_catalog_DF
-
-
-
-
-
 
 
 if __name__ == "__main__":
