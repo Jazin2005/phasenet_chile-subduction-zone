@@ -640,22 +640,39 @@ class PhaseNet_Analysis (object):
 
         for i in range (0,int (df_stream_traj.shape[0]/3)):
 
-            streamN = obspy.read(df_stream_traj.stream_traj.iloc[3*i])       
+            # Read the N element of the stream
+            streamN = obspy.read(df_stream_traj.stream_traj.iloc[3*i])
+
+            # Perform Slicing based on the start_time and start_time + dt       
             streamN = streamN.slice (obspy.UTCDateTime(start_time),obspy.UTCDateTime(start_time)+dt)
+            
+            # Perform filtering based on the freqmin and freqmax
             streamN.filter('bandpass', freqmin= 1, freqmax=20)
 
-            streamE = obspy.read(df_stream_traj.stream_traj.iloc[3*i+1])       
+            # Read the E element of the stream
+            streamE = obspy.read(df_stream_traj.stream_traj.iloc[3*i+1])
+
+            # Perform Slicing based on the start_time and start_time + dt      
             streamE = streamE.slice (obspy.UTCDateTime(start_time),obspy.UTCDateTime(start_time)+dt)
+
+            # Perform filtering based on the freqmin and freqmax
             streamE.filter('bandpass', freqmin= 1, freqmax=20)
 
-            streamZ = obspy.read(df_stream_traj.stream_traj.iloc[3*i+2])       
+            # Read the Z element of the stream
+            streamZ = obspy.read(df_stream_traj.stream_traj.iloc[3*i+2]) 
+
+            # Perform Slicing based on the start_time and start_time + dt 
             streamZ = streamE.slice (obspy.UTCDateTime(start_time),obspy.UTCDateTime(start_time)+dt)
+
+            # Perform filtering based on the freqmin and freqmax
             streamZ = streamZ.filter('bandpass', freqmin= 1, freqmax=20)
 
+            # add all 3 components and sort them
             streamN += streamE
             streamN += streamZ
             st = streamN.sort()
 
+            # Perform visualization data stream
             ax[3*i].set_title(fontsize=25,label="Station: {}".format(st[0].stats.station), fontdict=None, loc='center')
             ax[3*i].plot(st[0].times('matplotlib'), st[0].data, 
                         markersize=1, label = 'E Stream', color = 'k')
@@ -664,12 +681,11 @@ class PhaseNet_Analysis (object):
             ax[3*i+2].plot(st[2].times('matplotlib'), st[2].data,
                         markersize=1, label = 'Z Stream', color = 'k')
 
-            
             plt.setp(ax[3*i].get_xticklabels(), visible=False)
             plt.setp(ax[3*i+1].get_xticklabels(), visible=False)
 
             
-            # Draw P Picks imported from catalog
+            # Visualization of P Picks imported from catalog
 
             ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_P_picks[catalog_DF_P_picks['station_code'] == st[0].stats.station]['picks_time'].tolist()], 
                 ymin = (-st[0].max()),
@@ -690,7 +706,7 @@ class PhaseNet_Analysis (object):
                 color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
             ax[3*i+2].xaxis_date()  
 
-            # Draw S Picks imported from catalog           
+            # Visualization of S Picks imported from catalog           
             ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_S_picks[catalog_DF_S_picks['station_code'] == st[0].stats.station]['picks_time'].tolist()], 
                 ymin = (-st[0].max()),
                 ymax = (st[0].max()),
@@ -710,9 +726,8 @@ class PhaseNet_Analysis (object):
                 color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
             ax[3*i+2].xaxis_date() 
             
-            # Draw P waves imported from PhaseNet 
+            # Visualization of P Picks imported from PhaseNet 
             
-
             ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[0].stats.station]['timestamp']], 
                 ymin = (-st[0].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
                 ymax = (st[0].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
@@ -733,7 +748,7 @@ class PhaseNet_Analysis (object):
 
 
             
-            # Draw S waves imported from PhaseNet
+            # Visualization of S Picks imported from PhaseNet 
             ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[0].stats.station]['timestamp']], 
                 ymin = (-st[0].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
                 ymax = ( st[0].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
@@ -756,14 +771,16 @@ class PhaseNet_Analysis (object):
             ax[3*i].legend(loc='lower right')
             ax[3*i+1].legend(loc='lower right')
             ax[3*i+2].legend(loc='lower right')
+        
+        # Save png file in the export_DF_path
         file_name = '{0}{1}.{extention}'.format('Mismatched_PhaseNet_catalog_',obspy.UTCDateTime(start_time), extention='png')
         fig.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+        print ('--------------------------------------------------------------------------------')
+        print ('Figure was created and save it in the following directory:')
+        print(os.path.join(self.export_DF_path, file_name))
+        print ('--------------------------------------------------------------------------------')
         print ('end time is')
         print (st[0].stats.endtime)
-
-        
-
-        #return DF_selected_chile_path_file
         
 
     def apply_filter (self, stream):
@@ -927,6 +944,7 @@ class PhaseNet_Analysis (object):
         stations = pd.read_csv(os.path.join(self.working_direc, self.station_name_list), sep="\t")
         return stations
     
+
     def sort_stations_latitude(self,stations) -> pd.DataFrame:
         '''
         Sort station based on the latidude.
@@ -954,7 +972,7 @@ class PhaseNet_Analysis (object):
         return stations.sort_values("longitude", ascending=False)
         
     
-    def filter_station(self,df_stream_traj, stations):
+    def filter_station(self,df_stream_traj:'pd.DataFrame', stations:'pd.DataFrame') -> pd.DataFrame:
         '''
         This function filter df_stream_traj dataframe based on station code according to the statlist.txt file.
 
@@ -975,30 +993,47 @@ class PhaseNet_Analysis (object):
                 
                 Output:
                        - df_stream_traj (DF): filtered dataframe based on the station dataframe
-
-        
-        
-        
         '''
+
         df_stream_traj = df_stream_traj[df_stream_traj.station_code.isin(stations.station_code)]
 
         return df_stream_traj
     
-    def filter_date (self, catalog_DF_P_picks,start_time,dt):
+    def filter_date (self, catalog_DF,start_time,dt):
         '''
         This function filter events of catalogs based on the given interval for visualization.
+
+            Parameters:
+                    - catalog_DF (dataframe) : catalog data frame with the following columns:
+                            - 'picks_time'
+                            - 'picks_uncertainty'
+                            - 'network_code'
+                            - 'station_code'
+                            - 'phase_hint'
+                            - 'origins_time'
+                            - 'origins_longitude'
+                            - 'origins_latitude',
+                            - 'magnitudes' 
+                    
+                    - start_time (str): UTC data time format like '2012-01-01T17:00:01.820000Z'
+                    - dt (int): the time interval in second
+            
+            output:
+                    - catalog_DF (dataframe): prepared catalog dataframe for visualization
         '''
+        # calculate end time
         end_time = obspy.UTCDateTime(start_time) + dt
 
+        # convert end time to proper format
         end_time = end_time.strftime('%Y-%m-%d %H:%M:%S.%fZ')
 
-        catalog_DF_P_picks['UTC_time'] = pd.to_datetime(catalog_DF_P_picks.picks_time, utc=True)
+        # creat a 'UTC_time' column
+        catalog_DF['UTC_time'] = pd.to_datetime(catalog_DF.picks_time, utc=True)
 
-        #catalog_DF_P_picks['UTC_time'] = pd.Timestamp(catalog_DF_P_picks['UTC_time'])
+        # Filter catalog_DF based on the start_time and end_time
+        catalog_DF = catalog_DF[(catalog_DF['UTC_time'] >= pd.Timestamp(start_time,tz='UTC')) & (catalog_DF['UTC_time'] <= pd.Timestamp(end_time,tz='UTC'))]
 
-        catalog_DF_P_picks = catalog_DF_P_picks[(catalog_DF_P_picks['UTC_time'] >= pd.Timestamp(start_time,tz='UTC')) & (catalog_DF_P_picks['UTC_time'] <= pd.Timestamp(end_time,tz='UTC'))]
-
-        return catalog_DF_P_picks
+        return catalog_DF
     
     def DF_sort_station (self,dataframe, sorted_station_DF) -> pd.DataFrame:
         '''
@@ -1033,7 +1068,7 @@ class PhaseNet_Analysis (object):
         return sorted_dataframe
 
     
-    def catalog_data_prepration_for_vis (self, catalog_DF,start_time,dt) -> pd.DataFrame:
+    def catalog_data_prepration_for_vis (self, catalog_DF:'pd.DataFrame',start_time:'str',dt:'int') -> pd.DataFrame:
 
         '''
         This function prepare catalog data for visualization. This preparation contains the following:
@@ -1042,14 +1077,28 @@ class PhaseNet_Analysis (object):
                 - Filter catalog station order based on the station code of station
             
             Parameters:
-                    catalog_DF (dataframe) :  
+                    - catalog_DF (dataframe) : catalog data frame with the following columns:
+                            - 'picks_time'
+                            - 'picks_uncertainty'
+                            - 'network_code'
+                            - 'station_code'
+                            - 'phase_hint'
+                            - 'origins_time'
+                            - 'origins_longitude'
+                            - 'origins_latitude',
+                            - 'magnitudes' 
+                    
+                    - start_time (str): UTC data time format like '2012-01-01T17:00:01.820000Z'
+                    - dt (int): the time interval in second
+            
+            output:
+                    - catalog_DF (dataframe): prepared catalog dataframe for visualization
         '''
-        
+        # get the stations stored in txt file
         stations = self.get_stations ()
 
+        # Sort the stations based on the latitude
         stations = self.sort_stations_latitude(stations)
-
-
 
         catalog_DF['network_station']=catalog_DF['network_code'].astype(str)+'.'+catalog_DF['station_code']
 
@@ -1065,47 +1114,68 @@ class PhaseNet_Analysis (object):
         return catalog_DF
 
     
-    def phasenet_data_prepration_for_vis (self, df_P_picks ,start_time,dt):
+    def phasenet_data_prepration_for_vis (self, phasenet_picks_DF:'pd.DataFrame' ,start_time:'str',dt:'int'):
 
+        '''
+        This function prepare phasenet data for visualization. This preparation contains the following:
+                - Filter phasenet_picks_DF based on the stations dataframe
+                - Filter phasenet_picks_DF based on the given interval for visualization
+                - Filter phasenet_picks_DF station order based on the station code of station
+            
+            Parameters:
+                    - phasenet_picks_DF (dataframe) : catalog data frame with the following columns:
+                            - 'id': the id of stream in data
+                            - 'timestamp': the UTC date time data of picks
+                            - 'prob': Probability of picks
+                            - 'type': Type of picks (S or P)
+                            - 'picks_time': the UTC date time data of picks (like timestamp)
+                    
+                    - start_time (str): UTC data time format like '2012-01-01T17:00:01.820000Z'
+                    - dt (int): the time interval in second
+            
+            output:
+                    - phasenet_picks_DF (dataframe): prepared catalog dataframe for visualization
+        '''
+        # read the station data
         stations = self.get_stations ()
 
+        # Sort the station based on the latitude
         stations = self.sort_stations_latitude(stations)
 
         # creat extra columns
-        df_P_picks[['network', 'others']] = df_P_picks['id'].str.split('.', 1, expand=True)
-        df_P_picks[['station_code', 'date']] = df_P_picks['others'].str.split('.', 1, expand=True)
-        df_P_picks = df_P_picks.drop(['date', 'others'], axis=1)
+        phasenet_picks_DF[['network', 'others']] = phasenet_picks_DF['id'].str.split('.', 1, expand=True)
+        phasenet_picks_DF[['station_code', 'date']] = phasenet_picks_DF['others'].str.split('.', 1, expand=True)
+        phasenet_picks_DF = phasenet_picks_DF.drop(['date', 'others'], axis=1)
 
-        #catalog_DF_P_picks['network_station']=catalog_DF_P_picks['network_code'].astype(str)+'.'+catalog_DF_P_picks['station_code']
 
-        # Filter catalog_DF_P_picks based on the stations dataframe
-        df_P_picks = self.filter_station(df_P_picks, stations)
+        # Filter phasenet_picks_DF based on the stations dataframe
+        phasenet_picks_DF = self.filter_station(phasenet_picks_DF, stations)
 
-        # Filter catalog based on the given interval for visualization
-        df_P_picks = self.filter_date (df_P_picks,start_time,dt)
+        # Filter phasenet_picks_DF based on the given interval for visualization
+        phasenet_picks_DF = self.filter_date (phasenet_picks_DF,start_time,dt)
     
-        # Filter phasenet station order based on the station code of station
-        df_P_picks = self.DF_sort_station (df_P_picks, stations)
+        # Filter phasenet_picks_DF station order based on the station code of station
+        phasenet_picks_DF = self.DF_sort_station (phasenet_picks_DF, stations)
     
-        return df_P_picks
-    
+        return phasenet_picks_DF
 
 
-
-
-
-    def extract_mismatch_picks (self, catalog_DF, phasenet_DF):
+    def extract_mismatch_picks (self, catalog_DF:'pd.DataFrame', phasenet_DF:'pd.DataFrame') -> pd.DataFrame:
 
         '''
-        This function extract mismatch picks between phasenet and catalog
+        This function extract mismatch picks between phasenet and catalog.
                 parameters:
-                            - catalog_DF (dataframe): catalog picks Data Frame (s or p)
-                            - phasenet_DF (dataframe): phasenet picks Data Frame (s or p)
+                        - catalog_DF (dataframe): catalog picks Data Frame (s or p)
+                        - phasenet_DF (dataframe): phasenet picks Data Frame (s or p)
+                
+                output:
+                        - mis_match_catalog_DF (dataframe)
         '''
-
-        all_dists = np.array([])
+        
+        # Creat an empty DataFrame
         mis_match_catalog_DF = pd.DataFrame(index =[])
 
+        # Find common station code in phasenet_DF and catalog_DF
         common_station = np.intersect1d(catalog_DF.station_code.unique(), phasenet_DF.station_code.unique())
         
         # loop over all common station
@@ -1123,8 +1193,8 @@ class PhaseNet_Analysis (object):
             dist_mat = distance_matrix(a,b, p=1)
             dists = np.min(dist_mat, axis=1)
 
+            # filter the catalog_filter_station based on the given time_lag_threshold
             catalog_filter_station = catalog_filter_station[dists >= self.time_lag_threshold]
-
             mis_match_catalog_DF = pd.concat([mis_match_catalog_DF, catalog_filter_station], axis=0)
     
         return mis_match_catalog_DF
