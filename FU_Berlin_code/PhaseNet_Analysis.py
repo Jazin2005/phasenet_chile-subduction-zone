@@ -95,9 +95,6 @@ class PhaseNet_Analysis (object):
     def __call__ (self):
 
 
-        # load "DF_auxiliary_path_file.pkl" and "DF_selected_chile_path_file.pkl" based on the
-        # given interval.
-
         if self.analysis == True:
 
             self.DF_path ()
@@ -582,37 +579,51 @@ class PhaseNet_Analysis (object):
             file_name = '{0}{1}.{extention}'.format('PhaseNet_result_S_bins: ',round (bins_lag[j]), extention='png')
             fig.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
     
-    def mismatched_picks (self, start_time, dt):
+    def mismatched_picks (self, start_time, dt)-> pd.DataFrame:
 
         '''
         This function plot the PhaseNet picks which are mismatched with picks in Catalog.
+        Note: make sure all following pickle files exist in the "export_DF_path" directory:
+                - PhaseNet_result_p_picks
+                - PhaseNet_result_s_picks
+                - catalog_p_picks.pkl
+                - catalog_s_picks.pkl
+
         Parameters:
                 - dt(int): delta time in second. example: 7000
-                - start_time: start time. example: obspy.UTCDateTime("2020-12-31T08:19:57.480000Z")
+                - start_time: start time. example: "2020-12-31T08:19:57.480000Z"
+        Output:
+                - png figure in the "export_DF_path" directory
         '''
-        # load all picks in Catalog and PhaseNet
+        # load all picks in Catalog and PhaseNet based on the existed pickle files in the export_DF_path
 
-        # catalog_DF_P_picks, df_P_picks
+        # load PhaseNet_result_p_picks.pkl
         with open(os.path.join(self.export_DF_path, "PhaseNet_result_p_picks.pkl"),'rb') as fp:
             PhaseNet_result_p_picks = pickle.load(fp)
+
+            # add picks_time to PhaseNet_result_p_picks data frame for synchronization
             PhaseNet_result_p_picks['picks_time']= PhaseNet_result_p_picks.timestamp
 
+        # load catalog_p_picks.pkl
         with open(os.path.join(self.export_DF_path, "catalog_p_picks.pkl"),'rb') as fp:
             catalog_DF_P_picks = pickle.load(fp)
             
 
-        # catalog_DF_P_picks, df_P_picks
+        # load PhaseNet_result_s_picks.pkl
         with open(os.path.join(self.export_DF_path, "PhaseNet_result_s_picks.pkl"),'rb') as fp:
             PhaseNet_result_s_picks = pickle.load(fp)
+
+            # add picks_time to PhaseNet_result_s_picks data frame for synchronization
             PhaseNet_result_s_picks['picks_time']= PhaseNet_result_s_picks.timestamp
 
+        # load catalog_s_picks.pkl
         with open(os.path.join(self.export_DF_path, "catalog_s_picks.pkl"),'rb') as fp:
             catalog_DF_S_picks = pickle.load(fp)
 
 
 
-        # write mseed file in mseed folder and perform date filter for visualization 
-        df_stream_traj = self.write_mseed_filter_stream(start_time, dt)
+        # filter path of the existed streams for visualization 
+        df_stream_traj = self.filter_stream()
 
         # catalog data prepration for visualization
         catalog_DF_P_picks = self.catalog_data_prepration_for_vis(catalog_DF_P_picks,start_time,dt)
@@ -800,10 +811,26 @@ class PhaseNet_Analysis (object):
         stream = obspy.read(os.path.join(self.working_direc, 'mseed', '{0}'.format(daily_data)), sep="\t")
         return stream
     
-    def write_mseed_filter_stream (self,start_time, dt):
+    def filter_stream (self) -> pd.DataFrame: 
         
         '''
-        This function write mseed files on mseed folder and return the streams related to given interval for visualization.
+        This function filter path of the existed streams based on the "DF_selected_chile_path_file.pkl".
+        Make sure the following pickle exists in the "export_DF_path" directory:
+            - DF_selected_chile_path_file.pkl
+        
+        Output:
+                - df_stream_traj (dataframe): This dataframe in a filtered path dataframe based on the the following criterias:
+                        1- Rows order based on the stations latitude (CXstatlist.txt)
+                        2- Filter the data based on the station list in the "CXstatlist.txt"
+                        3- Select stream with have 3 components
+                
+                This data frame contains following columns:
+                    'stream_traj': Directory of the existed stream (like: /data2/chile/CHILE_GFZ_ONLINE/2012/CX/PB16/HHN.D/CX.PB16..HHN.D.2012.001')
+                    'year': Year of study for visualization according to the input
+                    'day' : day of study for visualization according to the input
+                    'file_name': stream file name (like: 'CXPB16D2012001')
+                    'station_code': station code
+                    'network_code': network code
         '''
 
         # load DF_selected_chile_path_file.pkl
@@ -826,23 +853,24 @@ class PhaseNet_Analysis (object):
 
         # drop the column
         df_stream_traj = df_stream_traj.drop(['rest'], axis=1)
+
+        # Filter df_stream_traj based on the given year and day
         df_stream_traj = df_stream_traj[(df_stream_traj['year']>= self.start_year_analysis) & (df_stream_traj['year']<= self.end_year_analysis)]
-
         df_stream_traj = df_stream_traj[(df_stream_traj['day']>= self.start_day_analysis) & (df_stream_traj['day']<= self.end_day_analysis)]  
-
         df_stream_traj = self.filter_year_day (df_stream_traj)
 
+        # read the station list for visualization
         stations = self.get_stations ()
 
+        # Sort stations based on the latitude
         stations = self.sort_stations_latitude(stations)
 
         # Filter df_stream_traj based on the stations dataframe
         df_stream_traj = self.filter_station(df_stream_traj, stations)
 
+        # Select the stream with three components
         proper_stream = df_stream_traj.groupby('file_name').file_name.count() > 2
         proper_stream = proper_stream[proper_stream==True]
-        
-        # filter stream with three components
         df_stream_traj = df_stream_traj[df_stream_traj.file_name.isin(proper_stream.index)]
 
         # Filter df_stream_traj based on the stations dataframe
@@ -885,21 +913,31 @@ class PhaseNet_Analysis (object):
         return df_stream_traj
     
 
-    def get_stations (self):
+    def get_stations (self) -> pd.DataFrame:
         '''
         Return the list of stations stored in station_name_list
         
-        Return:
-            - stations (list): The list of stations
+        Output:
+            - stations (dataframe): stations dataframe contains the following columns:
+                - 'network_code'
+                - 'station_code' 
+                - 'latidude'
+                - 'longitude'
         '''
         stations = pd.read_csv(os.path.join(self.working_direc, self.station_name_list), sep="\t")
         return stations
     
-    def sort_stations_latitude(self,stations):
+    def sort_stations_latitude(self,stations) -> pd.DataFrame:
         '''
-        Sort station based on latidude.
+        Sort station based on the latidude.
             Parameters:
-                        stations (DataFrame): This data frame contains at least two culomns (station name and corespondinglatidude)
+                    - stations (DataFrame): This dataframe contains the following columns:
+                        - 'network_code'
+                        - 'station_code' 
+                        - 'latidude'
+                        - 'longitude'
+            Output:    
+                    - stations (dataframe): sorted stations.
         '''
 
         return stations.sort_values("latidude", ascending=False)
@@ -919,9 +957,28 @@ class PhaseNet_Analysis (object):
     def filter_station(self,df_stream_traj, stations):
         '''
         This function filter df_stream_traj dataframe based on station code according to the statlist.txt file.
+
                 Parameters:
-                            - df_stream_traj (DF): data frame
-                            - stations (DF): stations data frame
+                        - df_stream_traj (DF): data frame. This data frame contains following columns:
+                            - 'stream_traj': Directory of the existed stream (like: /data2/chile/CHILE_GFZ_ONLINE/2012/CX/PB16/HHN.D/CX.PB16..HHN.D.2012.001')
+                            - 'year': Year of study for visualization according to the input
+                            - 'day' : day of study for visualization according to the input
+                            - 'file_name': stream file name (like: 'CXPB16D2012001')
+                            - 'station_code': station code
+                            - 'network_code': network code
+
+                        - stations (DF): stations data frame. This dataframe contains the following columns:
+                            - 'network_code'
+                            - 'station_code' 
+                            - 'latidude'
+                            - 'longitude'
+                
+                Output:
+                       - df_stream_traj (DF): filtered dataframe based on the station dataframe
+
+        
+        
+        
         '''
         df_stream_traj = df_stream_traj[df_stream_traj.station_code.isin(stations.station_code)]
 
@@ -943,9 +1000,28 @@ class PhaseNet_Analysis (object):
 
         return catalog_DF_P_picks
     
-    def DF_sort_station (self,dataframe, sorted_station_DF):
+    def DF_sort_station (self,dataframe, sorted_station_DF) -> pd.DataFrame:
         '''
         This function sort the order of stations information based on the sorted_station_DF dataframe.
+
+            Parameters:         
+                    Parameters:
+                    - dataframe (DF): data frame. This data frame contains following columns:
+                        - 'stream_traj': Directory of the existed stream (like: /data2/chile/CHILE_GFZ_ONLINE/2012/CX/PB16/HHN.D/CX.PB16..HHN.D.2012.001')
+                        - 'year': Year of study for visualization according to the input
+                        - 'day' : day of study for visualization according to the input
+                        - 'file_name': stream file name (like: 'CXPB16D2012001')
+                        - 'station_code': station code
+                        - 'network_code': network code
+
+                    - sorted_station_DF: sorted stations data frame. This dataframe contains the following columns:
+                        - 'network_code'
+                        - 'station_code' 
+                        - 'latidude'
+                        - 'longitude'
+            
+            Output:
+                    - sorted_dataframe (DF): filtered dataframe based on the sorted_station_DF
 
         '''
         sorted_dataframe  = pd.DataFrame()
@@ -957,26 +1033,36 @@ class PhaseNet_Analysis (object):
         return sorted_dataframe
 
     
-    def catalog_data_prepration_for_vis (self, catalog_DF_P_picks,start_time,dt):
+    def catalog_data_prepration_for_vis (self, catalog_DF,start_time,dt) -> pd.DataFrame:
 
+        '''
+        This function prepare catalog data for visualization. This preparation contains the following:
+                - Filter catalog_DF based on the stations dataframe
+                - Filter catalog based on the given interval for visualization
+                - Filter catalog station order based on the station code of station
+            
+            Parameters:
+                    catalog_DF (dataframe) :  
+        '''
+        
         stations = self.get_stations ()
 
         stations = self.sort_stations_latitude(stations)
 
 
 
-        catalog_DF_P_picks['network_station']=catalog_DF_P_picks['network_code'].astype(str)+'.'+catalog_DF_P_picks['station_code']
+        catalog_DF['network_station']=catalog_DF['network_code'].astype(str)+'.'+catalog_DF['station_code']
 
         # Filter catalog_DF_P_picks based on the stations dataframe
-        catalog_DF_P_picks = self.filter_station(catalog_DF_P_picks, stations)
+        catalog_DF = self.filter_station(catalog_DF, stations)
 
         # Filter catalog based on the given interval for visualization
-        catalog_DF_P_picks = self.filter_date (catalog_DF_P_picks,start_time,dt)
+        catalog_DF = self.filter_date (catalog_DF,start_time,dt)
 
         # Filter catalog station order based on the station code of station
-        catalog_DF_P_picks = self.DF_sort_station (catalog_DF_P_picks, stations)
+        catalog_DF = self.DF_sort_station (catalog_DF, stations)
     
-        return catalog_DF_P_picks
+        return catalog_DF
 
     
     def phasenet_data_prepration_for_vis (self, df_P_picks ,start_time,dt):
