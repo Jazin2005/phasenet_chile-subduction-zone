@@ -683,86 +683,88 @@ class PhaseNet_Analysis (object):
 
             
             # Visualization of P Picks imported from catalog
+            if catalog_DF_P_picks.shape[0] > 0: 
+                ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_P_picks[catalog_DF_P_picks['station_code'] == st[0].stats.station]['picks_time'].tolist()], 
+                    ymin = (-st[0].max()),
+                    ymax = (st[0].max()),
+                    color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
+                ax[3*i].xaxis_date()
 
-            ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_P_picks[catalog_DF_P_picks['station_code'] == st[0].stats.station]['picks_time'].tolist()], 
-                ymin = (-st[0].max()),
-                ymax = (st[0].max()),
-                color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
-            ax[3*i].xaxis_date()
+                ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_P_picks[catalog_DF_P_picks['station_code'] == st[1].stats.station]['picks_time'].tolist()], 
+                    ymin = (-st[1].max()),
+                    ymax = (st[1].max()),
+                    color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
+                ax[3*i+1].xaxis_date()
 
-            ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_P_picks[catalog_DF_P_picks['station_code'] == st[1].stats.station]['picks_time'].tolist()], 
-                ymin = (-st[1].max()),
-                ymax = (st[1].max()),
-                color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
-            ax[3*i+1].xaxis_date()
+                
+                ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_P_picks[catalog_DF_P_picks['station_code'] == st[2].stats.station]['picks_time'].tolist()], 
+                    ymin = (-st[2].max()),
+                    ymax = (st[2].max()),
+                    color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
+                ax[3*i+2].xaxis_date()  
+
+            # Visualization of S Picks imported from catalog
+            if catalog_DF_S_picks.shape[0] > 0:           
+                ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_S_picks[catalog_DF_S_picks['station_code'] == st[0].stats.station]['picks_time'].tolist()], 
+                    ymin = (-st[0].max()),
+                    ymax = (st[0].max()),
+                    color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
+                ax[3*i].xaxis_date()
+
+                ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_S_picks[catalog_DF_S_picks['station_code'] == st[1].stats.station]['picks_time'].tolist()], 
+                    ymin = (-st[1].max()),
+                    ymax = (st[1].max()),
+                    color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
+                ax[3*i+1].xaxis_date()
 
             
-            ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_P_picks[catalog_DF_P_picks['station_code'] == st[2].stats.station]['picks_time'].tolist()], 
-                ymin = (-st[2].max()),
-                ymax = (st[2].max()),
-                color='green', linestyle='dashdot', label = 'P pickes from catalog', linewidth=7.0, alpha=0.8)
-            ax[3*i+2].xaxis_date()  
-
-            # Visualization of S Picks imported from catalog           
-            ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_S_picks[catalog_DF_S_picks['station_code'] == st[0].stats.station]['picks_time'].tolist()], 
-                ymin = (-st[0].max()),
-                ymax = (st[0].max()),
-                color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
-            ax[3*i].xaxis_date()
-
-            ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_S_picks[catalog_DF_S_picks['station_code'] == st[1].stats.station]['picks_time'].tolist()], 
-                ymin = (-st[1].max()),
-                ymax = (st[1].max()),
-                color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
-            ax[3*i+1].xaxis_date()
-
-            
-            ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_S_picks[catalog_DF_S_picks['station_code'] == st[2].stats.station]['picks_time'].tolist()], 
-                ymin = (-st[2].max()),
-                ymax = (st[2].max()),
-                color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
-            ax[3*i+2].xaxis_date() 
+                ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in catalog_DF_S_picks[catalog_DF_S_picks['station_code'] == st[2].stats.station]['picks_time'].tolist()], 
+                    ymin = (-st[2].max()),
+                    ymax = (st[2].max()),
+                    color='khaki', linestyle='dashdot', label = 'S picks from catalog', linewidth=7.0, alpha=0.8)
+                ax[3*i+2].xaxis_date() 
             
             # Visualization of P Picks imported from PhaseNet 
-            
-            ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[0].stats.station]['timestamp']], 
-                ymin = (-st[0].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
-                ymax = (st[0].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
-                color='b', linestyle='solid', label = 'P picks by PhaseNet', alpha=0.6)
-            ax[3*i].xaxis_date()
+            if PhaseNet_result_p_picks.shape[0] > 0:
+                ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[0].stats.station]['timestamp']], 
+                    ymin = (-st[0].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
+                    ymax = (st[0].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
+                    color='b', linestyle='solid', label = 'P picks by PhaseNet', alpha=0.6)
+                ax[3*i].xaxis_date()
 
-            ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[1].stats.station]['timestamp']], 
-                ymin = (-st[1].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[1].stats.station]['prob'])).tolist(),
-                ymax = ( st[1].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[1].stats.station]['prob'])).tolist(),
-                color='b', linestyle='solid', label = 'P picks by PhaseNet', alpha=0.6)
-            ax[3*i+1].xaxis_date()
+                ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[1].stats.station]['timestamp']], 
+                    ymin = (-st[1].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[1].stats.station]['prob'])).tolist(),
+                    ymax = ( st[1].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[1].stats.station]['prob'])).tolist(),
+                    color='b', linestyle='solid', label = 'P picks by PhaseNet', alpha=0.6)
+                ax[3*i+1].xaxis_date()
 
-            ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[2].stats.station]['timestamp']], 
-                ymin = (-st[2].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[2].stats.station]['prob'])).tolist(),
-                ymax = ( st[2].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[2].stats.station]['prob'])).tolist(),
-                color='b', linestyle='solid', label = 'P picks by PhaseNet', alpha=0.6)
-            ax[3*i+2].xaxis_date()
+                ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[2].stats.station]['timestamp']], 
+                    ymin = (-st[2].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[2].stats.station]['prob'])).tolist(),
+                    ymax = ( st[2].max()*np.array (PhaseNet_result_p_picks[PhaseNet_result_p_picks['station_code'] == st[2].stats.station]['prob'])).tolist(),
+                    color='b', linestyle='solid', label = 'P picks by PhaseNet', alpha=0.6)
+                ax[3*i+2].xaxis_date()
 
 
             
             # Visualization of S Picks imported from PhaseNet 
-            ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[0].stats.station]['timestamp']], 
-                ymin = (-st[0].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
-                ymax = ( st[0].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
-                color='r', linestyle='solid', label = 'S picks by PhaseNet', alpha=0.6)
-            ax[3*i].xaxis_date()
+            if PhaseNet_result_s_picks.shape[0] > 0:
+                ax[3*i].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[0].stats.station]['timestamp']], 
+                    ymin = (-st[0].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
+                    ymax = ( st[0].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[0].stats.station]['prob'])).tolist(),
+                    color='r', linestyle='solid', label = 'S picks by PhaseNet', alpha=0.6)
+                ax[3*i].xaxis_date()
 
-            ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[1].stats.station]['timestamp']], 
-                ymin = (-st[1].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[1].stats.station]['prob'])).tolist(),
-                ymax = ( st[1].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[1].stats.station]['prob'])).tolist(),
-                color='r', linestyle='solid', label = 'S picks by PhaseNet', alpha=0.6)
-            ax[3*i+1].xaxis_date()
+                ax[3*i+1].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[1].stats.station]['timestamp']], 
+                    ymin = (-st[1].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[1].stats.station]['prob'])).tolist(),
+                    ymax = ( st[1].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[1].stats.station]['prob'])).tolist(),
+                    color='r', linestyle='solid', label = 'S picks by PhaseNet', alpha=0.6)
+                ax[3*i+1].xaxis_date()
 
-            ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[2].stats.station]['timestamp']], 
-                ymin = (-st[2].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[2].stats.station]['prob'])).tolist(),
-                ymax = ( st[2].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[2].stats.station]['prob'])).tolist(),
-                color='r', linestyle='solid', label = 'S picks by PhaseNet', alpha=0.6)
-            ax[3*i+2].xaxis_date()
+                ax[3*i+2].vlines([obspy.UTCDateTime(t).matplotlib_date for t in PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[2].stats.station]['timestamp']], 
+                    ymin = (-st[2].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[2].stats.station]['prob'])).tolist(),
+                    ymax = ( st[2].max()*np.array (PhaseNet_result_s_picks[PhaseNet_result_s_picks['station_code'] == st[2].stats.station]['prob'])).tolist(),
+                    color='r', linestyle='solid', label = 'S picks by PhaseNet', alpha=0.6)
+                ax[3*i+2].xaxis_date()
             
 
             ax[3*i].legend(loc='lower right')
@@ -770,7 +772,7 @@ class PhaseNet_Analysis (object):
             ax[3*i+2].legend(loc='lower right')
         
         # Save png file in the export_DF_path
-        file_name = '{0}{1}.{extention}'.format('Mismatched_PhaseNet_catalog_',obspy.UTCDateTime(start_time), extention='png')
+        file_name = '{0}{1}.{extention}'.format('Comparison_PhaseNet_catalog_',obspy.UTCDateTime(start_time), extention='png')
         fig.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         print ('--------------------------------------------------------------------------------')
         print ('Figure was created and save it in the following directory:')
@@ -1038,7 +1040,6 @@ class PhaseNet_Analysis (object):
         This function sort the order of stations information based on the sorted_station_DF dataframe.
 
             Parameters:         
-                    Parameters:
                     - dataframe (DF): data frame. This data frame contains following columns:
                         - 'stream_traj': Directory of the existed stream (like: /data2/chile/CHILE_GFZ_ONLINE/2012/CX/PB16/HHN.D/CX.PB16..HHN.D.2012.001')
                         - 'year': Year of study for visualization according to the input
@@ -1212,7 +1213,7 @@ if __name__ == "__main__":
     end_year_analysis = 2012
     end_day_analysis = 1
     analysis = False
-    time_lag_threshold = 2000
+    time_lag_threshold = 0
 
     station_name_list = 'CXstatlist.txt'
 
@@ -1222,7 +1223,7 @@ if __name__ == "__main__":
                             end_year_analysis, end_day_analysis, analysis, time_lag_threshold, station_name_list)
     
     
-    start_time ="2012-01-01T17:00:01.820000Z"
-    dt = 3600
+    start_time ="2012-01-01T05:03:35.820000Z"
+    dt = 100
     result = obj.mismatched_picks(start_time,dt)
     #result = obj.get_stations()
