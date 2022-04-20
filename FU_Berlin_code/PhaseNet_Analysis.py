@@ -1,3 +1,4 @@
+from typing import Tuple
 import pandas as pd
 import numpy as np
 import os
@@ -20,7 +21,7 @@ class PhaseNet_Analysis (object):
                 export_mseed_path:'str', working_direc:'str', picks_name:'str',
                 start_year_analysis:'int', start_day_analysis:'int', 
                 end_year_analysis:'int', end_day_analysis:'int', analysis:'bool', time_lag_threshold:'int',
-                station_name_list:'str'):
+                station_name_list:'str', apply_filter: 'bool', freqmin:'float', freqmax:'float'):
 
         '''
         Parameters initialization:
@@ -71,6 +72,14 @@ class PhaseNet_Analysis (object):
 
             - station_name_list: the name of selected station stored in the text file
 
+            - apply_filter (boolean): 
+                                - True: Apply filtering on raw data before feeding to phasenet
+                                - False:  feeding raw data without filtering.
+            
+            - freqmin (float): lower bound filtering (if apply_filter ==True)
+
+            - freqmax (float): upper bound filtering (if apply_filter ==True)
+
         '''
         os.chdir('{0}'.format(phasenet_direc))
         self.PROJECT_ROOT = os.getcwd()
@@ -87,6 +96,10 @@ class PhaseNet_Analysis (object):
         self.analysis = analysis
         self.time_lag_threshold = time_lag_threshold
         self.station_name_list = station_name_list
+        self.apply_filter = apply_filter
+        self.freqmin = freqmin
+        self.freqmax = freqmax
+
     
     def __call__ (self):
 
@@ -131,6 +144,11 @@ class PhaseNet_Analysis (object):
                 # Read the output of PhaseNet and store P picks and S picks in two data frames
                 p_picks, s_picks = self.read_picks()
 
+                # check
+                if ((p_picks.empty == True) and (s_picks.empty == True)):
+
+                    continue
+
                 # save data in data frame
                 #df_total = self.save_DF (df_p_picks, df_s_picks, mseed_name, df_picks)
                 #df_picks = df_total
@@ -166,10 +184,11 @@ class PhaseNet_Analysis (object):
 
             # Perform visulization & qaulity control of P picks
             # The results of visulization will be found at self.export_DF_path directory
-            self.compare_PhaseNet_catalog_P_picks()
+            #self.compare_PhaseNet_catalog_P_picks()
 
             # Perform visulization & qaulity control of S picks
             # The results of visulization will be found at self.export_DF_path directory
+
             self.compare_PhaseNet_catalog_S_picks()      
    
     
@@ -243,6 +262,10 @@ class PhaseNet_Analysis (object):
         streamN += streamZ
         stream = streamN.sort()
 
+        # Apply filter if apply_filter ==True
+        if self.apply_filter == True:
+            stream = self.filter (stream)
+
         # Write the mseed file (three components) in mseed folder
         string = df_components.file_name.iloc[2]
         mseed_name = string.replace("HHE", "").replace("HHN", "").replace("HHZ", "")
@@ -287,9 +310,13 @@ class PhaseNet_Analysis (object):
         with open(os.path.join(self.PROJECT_ROOT, "results/picks.json")) as fp:
             picks_json = json.load(fp)
         
-        df = pd.DataFrame.from_dict(pd.json_normalize(picks_json), orient='columns')
-        df_p_picks = df[df["type"] == 'p']
-        df_s_picks = df[df["type"] == 's']
+        if len (picks_json) == 0:
+            df_p_picks = pd.DataFrame({'A' : []})
+            df_s_picks = pd.DataFrame({'B' : []})
+        else:
+            df = pd.DataFrame.from_dict(pd.json_normalize(picks_json), orient='columns')
+            df_p_picks = df[df["type"] == 'p']
+            df_s_picks = df[df["type"] == 's']
 
         return df_p_picks, df_s_picks
     
@@ -392,36 +419,51 @@ class PhaseNet_Analysis (object):
 
             all_p_picks_exist_in_catalogtory = pd.concat([all_p_picks_exist_in_catalogtory, phasenet_filter_station], axis=0)
 
-        # Filter the time lag with the given threshold and capture the picks with more than 2 second time lag
+        # Filter the time lag with the given threshold and capture the picks with more than a given time lag
         dists_filter_lag_time_m=all_dists[all_dists >= self.time_lag_threshold]
 
-        # Perform P picks Quality control of PhaseNet by using existing P picks catalog with more than 2 second time lag
+        # Perform P picks Quality control of PhaseNet by using existing P picks catalog with more than a given time lag
         fig_lag_m, ax_lag_m = plt.subplots(figsize=(20,10))
-        n_lag_m, bins_lag_m, patches_lag_m = ax_lag_m.hist(dists_filter_lag_time_m, 20, density=False, facecolor='b', alpha=0.75)
+
+        label_more = '{0}{1}{2}'.format('The total number of common P picks with more than 2 seconds (', dists_filter_lag_time_m.shape[0], ')')
+
+        n_lag_m, bins_lag_m, patches_lag_m = ax_lag_m.hist(dists_filter_lag_time_m, 20, density=False, facecolor='b', alpha=0.75, label=label_more)
         steps = (max(dists_filter_lag_time_m) - min(dists_filter_lag_time_m))/20
         plt.xticks(np.arange(min(dists_filter_lag_time_m), max(dists_filter_lag_time_m), step=steps))
-        plt.xlabel('Time lag between catalog and PhaseNet (ms)', fontsize=18)
-        plt.ylabel('Frequency', fontsize=18)
-        plt.title('P picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with more 2s time lag', fontsize=21)
+        plt.xlabel('Time residual between catalog and PhaseNet (ms)', fontsize=20)
+        plt.ylabel('Number of P picks', fontsize=20)
+
+        plt.tick_params(axis='x', labelsize=15)
+        plt.tick_params(axis='y', labelsize=15)
+
+        plt.title('Common P picks distribution with more than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_lag_m), max(bins_lag_m))
         plt.grid(True)
-        file_name = '{0}.{extention}'.format('P picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with more than 2s time lag', extention='png')
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('P picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with more than 2s absolute time residual', extention='png')
         fig_lag_m.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         
-        # Filter the time lag with the given threshold and capture the picks with less than 2 second time lag
+        # Filter the time lag with the given threshold and capture the picks with less than a given time lag
         dists_filter_lag_time=all_dists[all_dists < self.time_lag_threshold]
 
-        # Perform P picks Quality control of PhaseNet by using existing P picks catalog with less than 2 second time lag
+        # Perform P picks Quality control of PhaseNet by using existing P picks catalog with less than a given time lag
         fig_lag, ax_lag = plt.subplots(figsize=(20,10))
-        n_lag, bins_lag, patches_lag = ax_lag.hist(dists_filter_lag_time, 20, density=False, facecolor='b', alpha=0.75)
+        label_less = '{0}{1}{2}{3}{4}'.format('The total number of common P picks ', dists_filter_lag_time.shape[0], ' out of all catalog P picks (', all_dists.shape[0],')')
+
+        n_lag, bins_lag, patches_lag = ax_lag.hist(dists_filter_lag_time, 20, density=False, facecolor='b', alpha=0.75, label=label_less)
         steps = (max(dists_filter_lag_time) - min(dists_filter_lag_time))/20
         plt.xticks(np.arange(min(dists_filter_lag_time), max(dists_filter_lag_time), step=steps))
-        plt.xlabel('Time lag between catalog and PhaseNet (ms)', fontsize=18)
-        plt.ylabel('Frequency', fontsize=18)
-        plt.title('P picks Quality control of PhaseNet (2012-01-01 to 2012-01-31)', fontsize=21)
+        plt.xlabel('Time residual between catalog and PhaseNet (ms)', fontsize=20)
+        plt.ylabel('Number of P picks', fontsize=20)
+
+        plt.tick_params(axis='x', labelsize=15)
+        plt.tick_params(axis='y', labelsize=15)
+
+        plt.title('Common P picks distribution with less than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_lag), max(bins_lag))
         plt.grid(True)
-        file_name = '{0}.{extention}'.format('P picks Quality control of PhaseNet (2012-01-01 to 2012-01-31)', extention='png')
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('P picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with less than 2s time residual', extention='png')
         fig_lag.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         
         
@@ -430,31 +472,69 @@ class PhaseNet_Analysis (object):
         all_p_picks_exist_in_catalogtory=all_p_picks_exist_in_catalogtory.iloc[all_dists < self.time_lag_threshold]
         
         fig0, ax0 = plt.subplots(figsize=(20,10))
-        label_co = '{0}{1}{2}'.format('Common P picks in catalog with less than 2 seconds time-lag (',all_p_picks_exist_in_catalogtory.shape[0], ' P picks)')
-        n_co, bins_co, patches_co = ax0.hist(all_p_picks_exist_in_catalogtory.prob, 21, density=False, alpha=0.75, label=label_co)
-        label_all = '{0}{1}{2}'.format('All PhaseNet P picks (',df_P_picks.shape[0], ' P picks)')
-        ax0.hist(df_P_picks.prob, 21, density=False, color = "skyblue", ec="skyblue", alpha=0.75, label= label_all)
+        label_co = '{0}{1}{2}{3}{4}'.format('The total number of common P picks ',all_p_picks_exist_in_catalogtory.shape[0], ' out of all catalog P picks (', all_dists.shape[0],')')
+        n_co, bins_co, patches_co = ax0.hist(all_p_picks_exist_in_catalogtory.prob, 21, density=False, alpha=0.75, color = "blue", label=label_co)
+        #label_all = '{0}{1}{2}'.format('All PhaseNet P picks (',df_P_picks.shape[0], ' P picks)')
+        #ax0.hist(df_P_picks.prob, 21, density=False, color = "skyblue", ec="skyblue", alpha=0.75, label= label_all)
         steps = (max(all_p_picks_exist_in_catalogtory.prob) - min(all_p_picks_exist_in_catalogtory.prob))/21
-        plt.xticks(np.arange(min(all_p_picks_exist_in_catalogtory.prob), max(all_p_picks_exist_in_catalogtory.prob), step=steps))
-        plt.xlabel('PhaseNet P picks Probability', fontsize=18)
-        plt.ylabel('Frequency', fontsize=18)
-        plt.title('PhaseNet output P picks(2012-01-01 to 2012-01-31)', fontsize=21)
+        #plt.xticks(np.arange(min(all_p_picks_exist_in_catalogtory.prob), max(all_p_picks_exist_in_catalogtory.prob), step=steps))
+        plt.xticks(np.around(np.arange(min(all_p_picks_exist_in_catalogtory.prob), max(all_p_picks_exist_in_catalogtory.prob), step=steps), decimals=2))
+        plt.xlabel('PhaseNet P picks Probability', fontsize=20)
+        plt.ylabel('Number of P picks', fontsize=20)
+        plt.tick_params(axis='x', labelsize=15)
+        plt.tick_params(axis='y', labelsize=15)
+        plt.title('Common P picks with less than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_co), max(bins_co))
         plt.grid(True)
-        plt.legend(loc='upper right')
-        file_name = '{0}.{extention}'.format('PhaseNet output P picks(2012-01-01 to 2012-01-31)', extention='png')
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('Common P picks in catalog & PhaseNet \n (2012-01-01 to 2012-01-31)', extention='png')
         fig0.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+
+
+
+
+
+
+
+        fig11, ax11 = plt.subplots(figsize=(20,10))
+        label_pha = '{0}{1}{2}'.format('The total number of PhaseNet P picks (',df_P_picks.shape[0], ')')
+        #n_co, bins_co, patches_co = ax0.hist(all_p_picks_exist_in_catalogtory.prob, 21, density=False, alpha=0.75, label=label_co)
+        #label_all = '{0}{1}{2}'.format('All PhaseNet P picks (',df_P_picks.shape[0], ' P picks)')
+        ax11.hist(df_P_picks.prob, 21, density=False, color = "slateblue", alpha=0.75, label =label_pha)
+        steps = (max(df_P_picks.prob) - min(df_P_picks.prob))/21
+        plt.xticks(np.around(np.arange(min(df_P_picks.prob), max(df_P_picks.prob), step=steps), decimals=2))
+
+        plt.xlabel('PhaseNet P picks Probability', fontsize=20)
+        plt.ylabel('Number of P picks', fontsize=20)
+
+        plt.tick_params(axis='x', labelsize=15)
+        plt.tick_params(axis='y', labelsize=15)
+
+        plt.title('PhaseNet output P picks(2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_co), max(bins_co))
+        plt.grid(True)
+        plt.legend(loc='upper center',fontsize=15)
+        file_name = '{0}.{extention}'.format('PhaseNet output P picks(2012-01-01 to 2012-01-31)', extention='png')
+        fig11.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+
+
         
-        # Perform P picks Quality control of PhaseNet by using existing P picks catalog with defined time lag 
+        # Perform P picks Quality control of PhaseNet by using existing P picks catalog with defined time residual 
         lag_time = all_dists[all_dists < self.time_lag_threshold]
         for j in range (1, bins_lag.shape[0]):
             select_p_picks=all_p_picks_exist_in_catalogtory.iloc[(lag_time < bins_lag[j]) & (lag_time >= bins_lag[j-1])]
             fig, ax = plt.subplots(figsize=(20,10))
             ax.hist(select_p_picks.prob, 21, density=False, color = "b", ec="b", alpha=0.75)
-            plt.xlabel('PhaseNet P picks Probability', fontsize=18)
-            plt.ylabel('Frequency', fontsize=18)
-            title_name = '{0}{1}{2}{3}{4}'.format('Common P picks in catalog with ',round (bins_lag[j-1]),' - ', round (bins_lag[j]), ' time lag (ms)')
-            plt.title(title_name, fontsize=21)
+
+            steps = (1 - 0.3)/21
+            plt.xticks(np.around(np.arange(min(select_p_picks.prob), max(select_p_picks.prob), step=steps), decimals=2))
+
+            plt.tick_params(axis='x', labelsize=15)
+            plt.tick_params(axis='y', labelsize=15)
+            plt.xlabel('PhaseNet P picks Probability', fontsize=20)
+            plt.ylabel('Number of P picks', fontsize=20)
+            title_name = '{0}{1}{2}{3}{4}'.format('Common P picks with ',round (bins_lag[j-1]),' - ', round (bins_lag[j]), ' time residual (ms)')
+            plt.title(title_name, fontsize=24, pad=23)
             file_name = '{0}{1}.{extention}'.format('PhaseNet_result_P_bins: ',round (bins_lag[j]), extention='png')
             fig.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         
@@ -513,6 +593,126 @@ class PhaseNet_Analysis (object):
         # Filter the time lag with the given threshold and capture the picks with more than 2 second time lag
         dists_filter_lag_time_m=all_dists[all_dists >= self.time_lag_threshold]
 
+        # Perform S picks Quality control of PhaseNet by using existing S picks catalog with more than a given time lag
+        fig_lag_m, ax_lag_m = plt.subplots(figsize=(20,10))
+
+        label_more = '{0}{1}{2}'.format('The total number of common S picks with more than 2 seconds (', dists_filter_lag_time_m.shape[0], ')')
+
+        n_lag_m, bins_lag_m, patches_lag_m = ax_lag_m.hist(dists_filter_lag_time_m, 20, density=False, facecolor='r', alpha=0.75, label=label_more)
+        steps = (max(dists_filter_lag_time_m) - min(dists_filter_lag_time_m))/20
+        plt.xticks(np.arange(min(dists_filter_lag_time_m), max(dists_filter_lag_time_m), step=steps))
+        plt.xlabel('Time residual between catalog and PhaseNet (ms)', fontsize=20)
+        plt.ylabel('Number of S picks', fontsize=20)
+
+        plt.tick_params(axis='x', labelsize=15)
+        plt.tick_params(axis='y', labelsize=15)
+
+        plt.title('Common S picks distribution with more than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_lag_m), max(bins_lag_m))
+        plt.grid(True)
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with more than 2s absolute time residual', extention='png')
+        fig_lag_m.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+        
+        # Filter the time lag with the given threshold and capture the picks with less than a given time lag
+        dists_filter_lag_time=all_dists[all_dists < self.time_lag_threshold]
+
+        # Perform S picks Quality control of PhaseNet by using existing S picks catalog with less than a given time lag
+        fig_lag, ax_lag = plt.subplots(figsize=(20,10))
+        label_less = '{0}{1}{2}{3}{4}'.format('The total number of common S picks ', dists_filter_lag_time.shape[0], ' out of all catalog S picks (', all_dists.shape[0],')')
+
+        n_lag, bins_lag, patches_lag = ax_lag.hist(dists_filter_lag_time, 20, density=False, facecolor='r', alpha=0.75, label=label_less)
+        steps = (max(dists_filter_lag_time) - min(dists_filter_lag_time))/20
+        plt.xticks(np.arange(min(dists_filter_lag_time), max(dists_filter_lag_time), step=steps))
+        plt.xlabel('Time residual between catalog and PhaseNet (ms)', fontsize=20)
+        plt.ylabel('Number of S picks', fontsize=20)
+
+        plt.tick_params(axis='x', labelsize=15)
+        plt.tick_params(axis='y', labelsize=15)
+
+        plt.title('Common S picks distribution with less than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_lag), max(bins_lag))
+        plt.grid(True)
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with less than 2s time residual', extention='png')
+        fig_lag.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+        
+        
+        # Plot the histogram probability of all S picks PhaseNet in the common stations 
+        
+        all_s_picks_exist_in_catalogtory=all_s_picks_exist_in_catalogtory.iloc[all_dists < self.time_lag_threshold]
+        
+        fig0, ax0 = plt.subplots(figsize=(20,10))
+        label_co = '{0}{1}{2}{3}{4}'.format('The total number of common S picks ',all_s_picks_exist_in_catalogtory.shape[0], ' out of all catalog S picks (', all_dists.shape[0],')')
+        n_co, bins_co, patches_co = ax0.hist(all_s_picks_exist_in_catalogtory.prob, 21, density=False, alpha=0.75, color = "r", label=label_co)
+        #label_all = '{0}{1}{2}'.format('All PhaseNet P picks (',df_P_picks.shape[0], ' P picks)')
+        #ax0.hist(df_P_picks.prob, 21, density=False, color = "skyblue", ec="skyblue", alpha=0.75, label= label_all)
+        steps = (max(all_s_picks_exist_in_catalogtory.prob) - min(all_s_picks_exist_in_catalogtory.prob))/21
+        #plt.xticks(np.arange(min(all_p_picks_exist_in_catalogtory.prob), max(all_p_picks_exist_in_catalogtory.prob), step=steps))
+        plt.xticks(np.around(np.arange(min(all_s_picks_exist_in_catalogtory.prob), max(all_s_picks_exist_in_catalogtory.prob), step=steps), decimals=2))
+        plt.xlabel('PhaseNet S picks Probability', fontsize=20)
+        plt.ylabel('Number of S picks', fontsize=20)
+        plt.tick_params(axis='x', labelsize=15)
+        plt.tick_params(axis='y', labelsize=15)
+        plt.title('Common S picks with less than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_co), max(bins_co))
+        plt.grid(True)
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('Common S picks in catalog & PhaseNet \n (2012-01-01 to 2012-01-31)', extention='png')
+        fig0.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+
+
+
+
+
+
+
+        fig11, ax11 = plt.subplots(figsize=(20,10))
+        label_pha = '{0}{1}{2}'.format('The total number of PhaseNet S picks (',df_S_picks.shape[0], ')')
+        #n_co, bins_co, patches_co = ax0.hist(all_p_picks_exist_in_catalogtory.prob, 21, density=False, alpha=0.75, label=label_co)
+        #label_all = '{0}{1}{2}'.format('All PhaseNet P picks (',df_P_picks.shape[0], ' P picks)')
+        ax11.hist(df_S_picks.prob, 21, density=False, color = "deeppink", alpha=0.75, label =label_pha)
+        steps = (max(df_S_picks.prob) - min(df_S_picks.prob))/21
+        plt.xticks(np.around(np.arange(min(df_S_picks.prob), max(df_S_picks.prob), step=steps), decimals=2))
+
+        plt.xlabel('PhaseNet S picks Probability', fontsize=20)
+        plt.ylabel('Number of S picks', fontsize=20)
+
+        plt.tick_params(axis='x', labelsize=15)
+        plt.tick_params(axis='y', labelsize=15)
+
+        plt.title('PhaseNet output S picks(2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_co), max(bins_co))
+        plt.grid(True)
+        plt.legend(loc='upper center',fontsize=15)
+        file_name = '{0}.{extention}'.format('PhaseNet output S picks(2012-01-01 to 2012-01-31)', extention='png')
+        fig11.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+
+
+        
+        # Perform S picks Quality control of PhaseNet by using existing S picks catalog with defined time residual 
+        lag_time = all_dists[all_dists < self.time_lag_threshold]
+        for j in range (1, bins_lag.shape[0]):
+            select_s_picks=all_s_picks_exist_in_catalogtory.iloc[(lag_time < bins_lag[j]) & (lag_time >= bins_lag[j-1])]
+            fig, ax = plt.subplots(figsize=(20,10))
+            ax.hist(select_s_picks.prob, 21, density=False, color = "r", ec="r", alpha=0.75)
+
+            steps = (1 - 0.3)/21
+            plt.xticks(np.around(np.arange(min(select_s_picks.prob), max(select_s_picks.prob), step=steps), decimals=2))
+
+            plt.tick_params(axis='x', labelsize=15)
+            plt.tick_params(axis='y', labelsize=15)
+            plt.xlabel('PhaseNet S picks Probability', fontsize=20)
+            plt.ylabel('Number of S picks', fontsize=20)
+            title_name = '{0}{1}{2}{3}{4}'.format('Common S picks with ',round (bins_lag[j-1]),' - ', round (bins_lag[j]), ' time residual (ms)')
+            plt.title(title_name, fontsize=24, pad=23)
+            file_name = '{0}{1}.{extention}'.format('PhaseNet_result_S_bins: ',round (bins_lag[j]), extention='png')
+            fig.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+
+
+
+
+        '''
         # Perform S picks Quality control of PhaseNet by using existing S picks catalog with more than 2 second time lag
         fig_lag_m, ax_lag_m = plt.subplots(figsize=(20,10))
         n_lag_m, bins_lag_m, patches_lag_m = ax_lag_m.hist(dists_filter_lag_time_m, 20, density=False, facecolor='r', alpha=0.75)
@@ -575,6 +775,7 @@ class PhaseNet_Analysis (object):
             plt.title(title_name, fontsize=21)
             file_name = '{0}{1}.{extention}'.format('PhaseNet_result_S_bins: ',round (bins_lag[j]), extention='png')
             fig.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
+    '''
     
     def mismatched_picks (self, start_time:'str', dt:'int')-> pd.DataFrame:
 
@@ -782,7 +983,7 @@ class PhaseNet_Analysis (object):
         print (st[0].stats.endtime)
         
 
-    def apply_filter (self, stream:'obspy') -> obspy:
+    def filter (self, stream:'obspy') -> obspy:
 
         '''
         Filter the data of all traces in the Stream. This can just support "bandpass" filter.
@@ -793,12 +994,13 @@ class PhaseNet_Analysis (object):
         Return:
                     - filtred stream
         '''
-        #sliced_stream = stream.filter('bandpass', freqmin= 1, freqmax=20)
-        print(stream)
-        stream.filter('bandpass', freqmin= 1, freqmax=20)
-        stream.filter('bandpass', freqmin= 1, freqmax=20)
-        stream.filter('bandpass', freqmin= 1, freqmax=20)
+        #sliced_stream = stream.filter('bandpass', freqmin= 1, freqmax=2
         
+        stream[0] = stream[0].filter('bandpass', freqmin= self.freqmin, freqmax=self.freqmax)
+        stream[1] = stream[1].filter('bandpass', freqmin= self.freqmin, freqmax=self.freqmax)
+        stream[2] = stream[2].filter('bandpass', freqmin= self.freqmin, freqmax=self.freqmax)
+        
+        stream = stream.slice (stream[0].stats.starttime+1000, stream[0].stats.endtime - 1000)
         return stream
 
     def data_slicing (self, starttime:'str', dt:'int', daily_data:'str') -> obspy:
@@ -1197,6 +1399,129 @@ class PhaseNet_Analysis (object):
             mis_match_catalog_DF = pd.concat([mis_match_catalog_DF, catalog_filter_station], axis=0)
     
         return mis_match_catalog_DF
+    
+    def proximity_matrix (self, phase_hint:'str') -> Tuple:
+
+        '''
+        This function measure the proximity matrix of PhaseNet performance assuming that the catalog is the ground-true.
+        In order to measure the proximity matrix, the following variables are using:
+
+                - True Positive (Tp): 
+                                    1- Peak probabilities of the phase is above 0.5 
+                                    2- Arrival-time residuals is less than 0.1 second
+
+                - False Positive (Fp):
+                                    1- Peak probabilities of the phase is above 0.5 
+                                    2- Arrival-time residuals is more than 0.1 second
+
+                - True Negative (Tn): 
+                                    1- Peak probabilities of the phase is below 0.5 
+                                    2- Arrival-time residuals is less than 0.1 second
+
+                - False Negative (Fn):
+                                    1- Peak probabilities of the phase is below 0.5 
+                                    2- Arrival-time residuals is more than 0.1 second            
+        
+
+                parameters:
+                        - Phase_hint (S or P): phase hint
+
+                Outputs:
+                        - Precision
+                        - recall
+                        - F1 score
+        '''
+        if phase_hint == 'P':
+            # load PhaseNet_result_p_picks.pkl
+            with open(os.path.join(self.export_DF_path, "PhaseNet_result_p_picks.pkl"),'rb') as fp:
+                phasenet_DF = pickle.load(fp)
+
+                # add picks_time to PhaseNet_result_p_picks data frame for synchronization
+                phasenet_DF['picks_time']= phasenet_DF.timestamp
+
+            # load catalog_p_picks.pkl
+            with open(os.path.join(self.export_DF_path, "catalog_p_picks.pkl"),'rb') as fp:
+                catalog_DF = pickle.load(fp)
+            
+        else:
+            # load PhaseNet_result_s_picks.pkl
+            with open(os.path.join(self.export_DF_path, "PhaseNet_result_s_picks.pkl"),'rb') as fp:
+                phasenet_DF = pickle.load(fp)
+
+                # add picks_time to PhaseNet_result_s_picks data frame for synchronization
+                phasenet_DF['picks_time']= phasenet_DF.timestamp
+
+            # load catalog_s_picks.pkl
+            with open(os.path.join(self.export_DF_path, "catalog_s_picks.pkl"),'rb') as fp:
+                catalog_DF = pickle.load(fp)
+
+        # creat extra columns
+        phasenet_DF[['network', 'others']] = phasenet_DF['id'].str.split('.', 1, expand=True)
+        phasenet_DF[['station_code', 'date']] = phasenet_DF['others'].str.split('.', 1, expand=True)
+        phasenet_DF = phasenet_DF.drop(['date', 'others'], axis=1)
+
+        # Intialize the true postive counter, false postive counter, true negative counter, and false negative counter 
+        true_pos_count = 0
+        false_pos_count = 0
+
+        true_neg_count = 0
+        false_neg_count = 0
+
+        # Find common station code in phasenet_DF and catalog_DF
+        common_station = np.intersect1d(catalog_DF.station_code.unique(), phasenet_DF.station_code.unique())
+        
+        # loop over all common stations
+        for i in common_station:
+            bo = catalog_DF['station_code']==i
+            catalog_filter_station = catalog_DF[(bo==True)]
+            ao = phasenet_DF['station_code']==i
+            phasenet_filter_station = phasenet_DF[(ao==True)]
+
+            # Convert UTC time to datetime64[ms] (millisecond)
+            a = catalog_filter_station.picks_time.to_numpy(dtype='datetime64[ms]')[:, np.newaxis].astype("float")
+            b = phasenet_filter_station.timestamp.to_numpy(dtype='datetime64[ms]')[:, np.newaxis].astype("float")
+
+            # Calculate P1 norme of all datetime64[m
+            dist_mat = distance_matrix(a,b, p=1)
+            dists = np.min(dist_mat, axis=1)
+
+            
+            probability = phasenet_filter_station.prob.iloc[np.argmin(dist_mat, axis=1)].to_numpy()
+
+            #calculate True poitive
+            Tp = catalog_filter_station[(dists <= self.time_lag_threshold) & (probability >= 0.5)].shape[0]
+            true_pos_count = true_pos_count + Tp
+
+            # calculate false poitive
+            Fp = catalog_filter_station[(dists > self.time_lag_threshold) & (probability >= 0.5)].shape[0]
+            false_pos_count = false_pos_count + Fp
+
+            # calculate true negative
+            Tn = catalog_filter_station[(dists > self.time_lag_threshold) & (probability < 0.5)].shape[0]
+            true_neg_count = true_neg_count + Tn
+
+            # calculate false negative
+
+            Fn = catalog_filter_station[(dists <= self.time_lag_threshold) & (probability < 0.5)].shape[0]
+            false_neg_count = false_neg_count + Fn
+
+        # calculate Precision
+        precision = true_pos_count /(true_pos_count + false_pos_count)
+
+        # calculate Recall
+        recall = true_pos_count /(true_pos_count + false_neg_count)
+
+        # calculate f1 score
+        f1_score = (2*precision*recall)/(precision + recall)
+
+        # calculate TRP
+        TPR = true_pos_count /(true_pos_count + false_neg_count)
+
+        # calculate FPR
+        FPR = false_pos_count /(false_pos_count + true_neg_count)
+
+        return precision, recall, f1_score, TPR, FPR
+        
 
 
 if __name__ == "__main__":
@@ -1211,19 +1536,34 @@ if __name__ == "__main__":
     start_year_analysis = 2012
     start_day_analysis = 1
     end_year_analysis = 2012
-    end_day_analysis = 1
+    end_day_analysis = 31
     analysis = False
-    time_lag_threshold = 0
+
+    apply_filter = False
+    freqmin = 0.2
+    freqmax = 10
+
+    time_lag_threshold = 100
 
     station_name_list = 'CXstatlist.txt'
 
     obj = PhaseNet_Analysis (phasenet_direc,chile_GFZ_online_direc,export_DF_path, 
                             export_mseed_path, working_direc, picks_name, 
                             start_year_analysis, start_day_analysis,
-                            end_year_analysis, end_day_analysis, analysis, time_lag_threshold, station_name_list)
+                            end_year_analysis, end_day_analysis, analysis, 
+                            time_lag_threshold, station_name_list,
+                            apply_filter, freqmin, freqmax)
     
     
     start_time ="2012-01-01T05:03:35.820000Z"
     dt = 100
-    result = obj.mismatched_picks(start_time,dt)
+    #result = obj.mismatched_picks(start_time,dt)
     #result = obj.get_stations()
+    #result = obj()
+    #D = obj.read_picks()
+    precision, recall, f1_score, TPR, FPR = obj.proximity_matrix('S')
+    print('precision is \n', precision)
+    print('recall is \n', recall)
+    print('f1_score is \n', f1_score)
+
+
