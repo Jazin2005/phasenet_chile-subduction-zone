@@ -17,8 +17,12 @@ end_day_analysis = 1
 # PhaseNet run 
 analysis = False
 
+apply_filter = False
+freqmin = 0.2
+freqmax = 10
+
 # Threshold for comparision
-time_lag_threshold = 1000
+time_lag_threshold = 100
 
 # Station name list
 station_name_list = 'CXstatlist.txt'

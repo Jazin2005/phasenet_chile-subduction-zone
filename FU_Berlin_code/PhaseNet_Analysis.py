@@ -834,6 +834,8 @@ class PhaseNet_Analysis (object):
         # extract mis match picks
         catalog_DF_P_picks = self.extract_mismatch_picks (catalog_DF_P_picks , PhaseNet_result_p_picks) 
         
+        df_stream_traj = df_stream_traj.iloc[0:23,:]
+
         fig, ax = plt.subplots(df_stream_traj.shape[0],1,figsize=(40,90),constrained_layout = True)
 
         for i in range (0,int (df_stream_traj.shape[0]/3)):
@@ -1466,6 +1468,7 @@ class PhaseNet_Analysis (object):
 
         true_neg_count = 0
         false_neg_count = 0
+        all = 0
 
         # Find common station code in phasenet_DF and catalog_DF
         common_station = np.intersect1d(catalog_DF.station_code.unique(), phasenet_DF.station_code.unique())
@@ -1485,7 +1488,7 @@ class PhaseNet_Analysis (object):
             dist_mat = distance_matrix(a,b, p=1)
             dists = np.min(dist_mat, axis=1)
 
-            
+            all = all + catalog_filter_station.shape[0]
             probability = phasenet_filter_station.prob.iloc[np.argmin(dist_mat, axis=1)].to_numpy()
 
             #calculate True poitive
@@ -1536,14 +1539,14 @@ if __name__ == "__main__":
     start_year_analysis = 2012
     start_day_analysis = 1
     end_year_analysis = 2012
-    end_day_analysis = 31
+    end_day_analysis = 1
     analysis = False
 
     apply_filter = False
     freqmin = 0.2
     freqmax = 10
 
-    time_lag_threshold = 100
+    time_lag_threshold = 2000
 
     station_name_list = 'CXstatlist.txt'
 
@@ -1555,15 +1558,14 @@ if __name__ == "__main__":
                             apply_filter, freqmin, freqmax)
     
     
-    start_time ="2012-01-01T05:03:35.820000Z"
-    dt = 100
-    #result = obj.mismatched_picks(start_time,dt)
+    start_time ="2012-01-01T05:15:38.820000Z"
+    dt = 25
+    result = obj.mismatched_picks(start_time,dt)
     #result = obj.get_stations()
     #result = obj()
-    #D = obj.read_picks()
-    precision, recall, f1_score, TPR, FPR = obj.proximity_matrix('S')
-    print('precision is \n', precision)
-    print('recall is \n', recall)
-    print('f1_score is \n', f1_score)
+    #precision, recall, f1_score, TPR, FPR = obj.proximity_matrix('P')
+    #print('precision is \n', precision)
+    #print('recall is \n', recall)
+    #print('f1_score is \n', f1_score)
 
 

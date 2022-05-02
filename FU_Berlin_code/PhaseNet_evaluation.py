@@ -21,7 +21,8 @@ class PhaseNet_evaluation (object):
         self.obj =PhaseNet_Analysis (phasenet_direc,chile_GFZ_online_direc,export_DF_path, 
                 export_mseed_path, working_direc, picks_name, 
                 start_year_analysis, start_day_analysis,
-                end_year_analysis, end_day_analysis, analysis, time_lag_threshold, station_name_list)
+                end_year_analysis, end_day_analysis, analysis, time_lag_threshold, station_name_list,
+                apply_filter, freqmin, freqmax)
 
     def plot_roc (self):
 
@@ -29,15 +30,16 @@ class PhaseNet_evaluation (object):
         all_FPR = np.zeros((1, 1))
         time_lag_threshold  = self.obj.time_lag_threshold 
 
-        while time_lag_threshold < 50000:
+        while time_lag_threshold < 2000:
 
             obj =PhaseNet_Analysis (phasenet_direc,chile_GFZ_online_direc,export_DF_path, 
                             export_mseed_path, working_direc, picks_name, 
                             start_year_analysis, start_day_analysis,
-                            end_year_analysis, end_day_analysis, analysis, time_lag_threshold, station_name_list)
+                            end_year_analysis, end_day_analysis, analysis, time_lag_threshold, station_name_list,
+                            apply_filter, freqmin, freqmax)
 
             precision, recall, f1_score, TPR, FPR = obj.proximity_matrix('S')
-            time_lag_threshold = time_lag_threshold + 100
+            time_lag_threshold = time_lag_threshold + 10
 
             all_TPR = np.vstack((all_TPR, TPR))
 
