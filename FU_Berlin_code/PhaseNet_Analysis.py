@@ -421,7 +421,7 @@ class PhaseNet_Analysis (object):
             
 
             # choosing the right interval to select right amplitude
-
+            
 
             if index_s_0 < times_0.shape[0] - 150:
                 amp_s_0 = np.absolute(stream[0].data[index_s_0:index_s_0+150]).max()
