@@ -3,7 +3,10 @@ phasenet_direc = '/home/javak/phasenet_chile-subduction-zone'
 chile_GFZ_online_direc = '/data2/chile/CHILE_GFZ_ONLINE'
 export_DF_path = '/home/javak/Sample_data_chile/Comparing PhaseNet and Catalog'
 export_mseed_path = '/home/javak/Sample_data_chile/mseed'
+<<<<<<< HEAD
 
+=======
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
 working_direc = '/home/javak/Sample_data_chile'
 
 # The name of events for comparision

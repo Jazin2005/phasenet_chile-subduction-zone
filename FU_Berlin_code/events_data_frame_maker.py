@@ -63,5 +63,8 @@ if __name__ == "__main__":
     # File name
     fname_cat = "2020.xml"
     export_DF_path = '/home/javak/Sample_data_chile/Comparing PhaseNet and Catalog'
+<<<<<<< HEAD
 
     events_data_frame(working_direc, fname_cat, export_DF_path)
+=======
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6

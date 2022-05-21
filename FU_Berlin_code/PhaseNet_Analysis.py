@@ -10,8 +10,11 @@ import datetime
 from scipy.spatial import distance_matrix
 import matplotlib.pyplot as plt
 
+<<<<<<< HEAD
 obspy.UTCDateTime.DEFAULT_PRECISION = 3
 
+=======
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
 class PhaseNet_Analysis (object):
 
     '''
@@ -137,6 +140,7 @@ class PhaseNet_Analysis (object):
                 # Write the name of mseed file in mseed.csv
                 self.write_mseed_names(mseed_name)
 
+<<<<<<< HEAD
                 print ('--------------------------------------------')
                 print ('feeding to PhaseNet is starting')
                 print ('file name:')
@@ -155,6 +159,16 @@ class PhaseNet_Analysis (object):
                 self.remove_mseed (mseed_name)
 
 
+=======
+                # Run PhaseNet
+                self.run_phasenet()
+
+                # Remove created mseed in mseed folder to free up memory
+                self.remove_mseed (mseed_name)
+
+                # Read the output of PhaseNet and store P picks and S picks in two data frames
+                p_picks, s_picks = self.read_picks()
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
 
                 # check
                 if ((p_picks.empty == True) and (s_picks.empty == True)):
@@ -196,7 +210,11 @@ class PhaseNet_Analysis (object):
 
             # Perform visulization & qaulity control of P picks
             # The results of visulization will be found at self.export_DF_path directory
+<<<<<<< HEAD
             self.compare_PhaseNet_catalog_P_picks()
+=======
+            #self.compare_PhaseNet_catalog_P_picks()
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
 
             # Perform visulization & qaulity control of S picks
             # The results of visulization will be found at self.export_DF_path directory
@@ -219,10 +237,15 @@ class PhaseNet_Analysis (object):
         with open(os.path.join(self.export_DF_path, "DF_chile_path_file.pkl"),'rb') as fp:
             chile_path_file = pickle.load(fp)
 
+<<<<<<< HEAD
 
         chile_path_file = chile_path_file[
                     (chile_path_file['year']>= self.start_year_analysis) 
                     & (chile_path_file['year']<= self.end_year_analysis)]
+=======
+        chile_path_file = chile_path_file[(chile_path_file['year']>= self.start_year_analysis) & 
+                    (chile_path_file['year']<= self.end_year_analysis)]
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
 
         chile_path_file['convert_yeartoday']= 365*chile_path_file['year']+chile_path_file['day']
         
@@ -242,7 +265,11 @@ class PhaseNet_Analysis (object):
 
         # drop the 'count' column
         df_counter = df_counter.drop(columns=['count'])
+<<<<<<< HEAD
         df_counter = df_counter.sort_values(by=['year', 'day'])
+=======
+
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         # Save selected DataFrame based on given time interval
         chile_path_file.to_pickle(os.path.join(self.export_DF_path , 'DF_selected_chile_path_file.pkl'))
 
@@ -334,6 +361,7 @@ class PhaseNet_Analysis (object):
 
         return df_p_picks, df_s_picks
     
+<<<<<<< HEAD
     def extract_amplitude (self, p_picks:'pd.DataFrame', s_picks:'pd.DataFrame')-> pd.DataFrame:
 
         '''This function extract amplitude of corresponding picks captured by phasenet
@@ -451,6 +479,8 @@ class PhaseNet_Analysis (object):
         s_picks['s_phase_amp'] = amplitude_s[:, 3]
 
 
+=======
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
     def remove_mseed (self,mseed_name:'str') -> pd.DataFrame:
 
         '''
@@ -567,11 +597,19 @@ class PhaseNet_Analysis (object):
         plt.tick_params(axis='x', labelsize=15)
         plt.tick_params(axis='y', labelsize=15)
 
+<<<<<<< HEAD
         plt.title('Common P picks distribution with more than 2 seconds time residual (2012-01-01 to 2012-12-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_lag_m), max(bins_lag_m))
         plt.grid(True)
         plt.legend(loc='upper center', fontsize=15)
         file_name = '{0}.{extention}'.format('P picks Quality control of PhaseNet (2012-01-01 to 2012-12-31) with more than 2s absolute time residual', extention='png')
+=======
+        plt.title('Common P picks distribution with more than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_lag_m), max(bins_lag_m))
+        plt.grid(True)
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('P picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with more than 2s absolute time residual', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig_lag_m.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         
         # Filter the time lag with the given threshold and capture the picks with less than a given time lag
@@ -590,11 +628,19 @@ class PhaseNet_Analysis (object):
         plt.tick_params(axis='x', labelsize=15)
         plt.tick_params(axis='y', labelsize=15)
 
+<<<<<<< HEAD
         plt.title('Common P picks distribution with less than 2 seconds time residual (2012-01-01 to 2012-12-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_lag), max(bins_lag))
         plt.grid(True)
         plt.legend(loc='upper center', fontsize=15)
         file_name = '{0}.{extention}'.format('P picks Quality control of PhaseNet (2012-01-01 to 2012-12-31) with less than 2s time residual', extention='png')
+=======
+        plt.title('Common P picks distribution with less than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_lag), max(bins_lag))
+        plt.grid(True)
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('P picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with less than 2s time residual', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig_lag.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         
         
@@ -614,11 +660,19 @@ class PhaseNet_Analysis (object):
         plt.ylabel('Number of P picks', fontsize=20)
         plt.tick_params(axis='x', labelsize=15)
         plt.tick_params(axis='y', labelsize=15)
+<<<<<<< HEAD
         plt.title('Common P picks with less than 2 seconds time residual (2012-01-01 to 2012-12-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_co), max(bins_co))
         plt.grid(True)
         plt.legend(loc='upper center', fontsize=15)
         file_name = '{0}.{extention}'.format('Common P picks in catalog & PhaseNet \n (2012-01-01 to 2012-12-31)', extention='png')
+=======
+        plt.title('Common P picks with less than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_co), max(bins_co))
+        plt.grid(True)
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('Common P picks in catalog & PhaseNet \n (2012-01-01 to 2012-01-31)', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig0.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
 
 
@@ -641,11 +695,19 @@ class PhaseNet_Analysis (object):
         plt.tick_params(axis='x', labelsize=15)
         plt.tick_params(axis='y', labelsize=15)
 
+<<<<<<< HEAD
         plt.title('PhaseNet output P picks(2012-01-01 to 2012-12-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_co), max(bins_co))
         plt.grid(True)
         plt.legend(loc='upper center',fontsize=15)
         file_name = '{0}.{extention}'.format('PhaseNet output P picks(2012-01-01 to 2012-12-31)', extention='png')
+=======
+        plt.title('PhaseNet output P picks(2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_co), max(bins_co))
+        plt.grid(True)
+        plt.legend(loc='upper center',fontsize=15)
+        file_name = '{0}.{extention}'.format('PhaseNet output P picks(2012-01-01 to 2012-01-31)', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig11.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
 
 
@@ -738,11 +800,19 @@ class PhaseNet_Analysis (object):
         plt.tick_params(axis='x', labelsize=15)
         plt.tick_params(axis='y', labelsize=15)
 
+<<<<<<< HEAD
         plt.title('Common S picks distribution with more than 2 seconds time residual (2012-01-01 to 2012-12-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_lag_m), max(bins_lag_m))
         plt.grid(True)
         plt.legend(loc='upper center', fontsize=15)
         file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-12-31) with more than 2s absolute time residual', extention='png')
+=======
+        plt.title('Common S picks distribution with more than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_lag_m), max(bins_lag_m))
+        plt.grid(True)
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with more than 2s absolute time residual', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig_lag_m.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         
         # Filter the time lag with the given threshold and capture the picks with less than a given time lag
@@ -761,11 +831,19 @@ class PhaseNet_Analysis (object):
         plt.tick_params(axis='x', labelsize=15)
         plt.tick_params(axis='y', labelsize=15)
 
+<<<<<<< HEAD
         plt.title('Common S picks distribution with less than 2 seconds time residual (2012-01-01 to 2012-12-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_lag), max(bins_lag))
         plt.grid(True)
         plt.legend(loc='upper center', fontsize=15)
         file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-12-31) with less than 2s time residual', extention='png')
+=======
+        plt.title('Common S picks distribution with less than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_lag), max(bins_lag))
+        plt.grid(True)
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with less than 2s time residual', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig_lag.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         
         
@@ -785,11 +863,19 @@ class PhaseNet_Analysis (object):
         plt.ylabel('Number of S picks', fontsize=20)
         plt.tick_params(axis='x', labelsize=15)
         plt.tick_params(axis='y', labelsize=15)
+<<<<<<< HEAD
         plt.title('Common S picks with less than 2 seconds time residual (2012-01-01 to 2012-12-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_co), max(bins_co))
         plt.grid(True)
         plt.legend(loc='upper center', fontsize=15)
         file_name = '{0}.{extention}'.format('Common S picks in catalog & PhaseNet \n (2012-01-01 to 2012-12-31)', extention='png')
+=======
+        plt.title('Common S picks with less than 2 seconds time residual (2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_co), max(bins_co))
+        plt.grid(True)
+        plt.legend(loc='upper center', fontsize=15)
+        file_name = '{0}.{extention}'.format('Common S picks in catalog & PhaseNet \n (2012-01-01 to 2012-01-31)', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig0.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
 
 
@@ -812,11 +898,19 @@ class PhaseNet_Analysis (object):
         plt.tick_params(axis='x', labelsize=15)
         plt.tick_params(axis='y', labelsize=15)
 
+<<<<<<< HEAD
         plt.title('PhaseNet output S picks(2012-01-01 to 2012-12-31)', fontsize=24, pad=23)
         plt.xlim(min(bins_co), max(bins_co))
         plt.grid(True)
         plt.legend(loc='upper center',fontsize=15)
         file_name = '{0}.{extention}'.format('PhaseNet output S picks(2012-01-01 to 2012-12-31)', extention='png')
+=======
+        plt.title('PhaseNet output S picks(2012-01-01 to 2012-01-31)', fontsize=24, pad=23)
+        plt.xlim(min(bins_co), max(bins_co))
+        plt.grid(True)
+        plt.legend(loc='upper center',fontsize=15)
+        file_name = '{0}.{extention}'.format('PhaseNet output S picks(2012-01-01 to 2012-01-31)', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig11.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
 
 
@@ -851,10 +945,17 @@ class PhaseNet_Analysis (object):
         plt.xticks(np.arange(min(dists_filter_lag_time_m), max(dists_filter_lag_time_m), step=steps))
         plt.xlabel('Time lag between catalog and PhaseNet (ms)', fontsize=18)
         plt.ylabel('Frequency', fontsize=18)
+<<<<<<< HEAD
         plt.title('S picks Quality control of PhaseNet (2012-01-01 to 2012-12-31) with more 2s time lag', fontsize=21)
         plt.xlim(min(bins_lag_m), max(bins_lag_m))
         plt.grid(True)
         file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-12-31) with more 2s time lag', extention='png')
+=======
+        plt.title('S picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with more 2s time lag', fontsize=21)
+        plt.xlim(min(bins_lag_m), max(bins_lag_m))
+        plt.grid(True)
+        file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-01-31) with more 2s time lag', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig_lag_m.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
 
 
@@ -868,10 +969,17 @@ class PhaseNet_Analysis (object):
         plt.xticks(np.arange(min(dists_filter_lag_time), max(dists_filter_lag_time), step=steps))
         plt.xlabel('Time lag between catalog and PhaseNet (ms)', fontsize=18)
         plt.ylabel('Frequency', fontsize=18)
+<<<<<<< HEAD
         plt.title('S picks Quality control of PhaseNet (2012-01-01 to 2012-12-31)', fontsize=21)
         plt.xlim(min(bins_lag), max(bins_lag))
         plt.grid(True)
         file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-12-31)', extention='png')
+=======
+        plt.title('S picks Quality control of PhaseNet (2012-01-01 to 2012-01-31)', fontsize=21)
+        plt.xlim(min(bins_lag), max(bins_lag))
+        plt.grid(True)
+        file_name = '{0}.{extention}'.format('S picks Quality control of PhaseNet (2012-01-01 to 2012-01-31)', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig_lag.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         
         
@@ -887,11 +995,19 @@ class PhaseNet_Analysis (object):
         plt.xticks(np.arange(min(all_s_picks_exist_in_catalogtory.prob), max(all_s_picks_exist_in_catalogtory.prob), step=steps))
         plt.xlabel('PhaseNet S picks Probability', fontsize=18)
         plt.ylabel('Frequency', fontsize=18)
+<<<<<<< HEAD
         plt.title('PhaseNet output S picks(2012-01-01 to 2012-12-31)', fontsize=21)
         plt.xlim(min(bins_co), max(bins_co))
         plt.grid(True)
         plt.legend(loc='upper right')
         file_name = '{0}.{extention}'.format('PhaseNet output S picks(2012-01-01 to 2012-12-31)', extention='png')
+=======
+        plt.title('PhaseNet output S picks(2012-01-01 to 2012-01-31)', fontsize=21)
+        plt.xlim(min(bins_co), max(bins_co))
+        plt.grid(True)
+        plt.legend(loc='upper right')
+        file_name = '{0}.{extention}'.format('PhaseNet output S picks(2012-01-01 to 2012-01-31)', extention='png')
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
         fig0.savefig(os.path.join(self.export_DF_path, file_name), facecolor = 'w')
         
         # Perform S picks Quality control of PhaseNet by using existing S picks catalog with defined time lag 
@@ -1660,6 +1776,7 @@ class PhaseNet_Analysis (object):
 
 if __name__ == "__main__":
 
+<<<<<<< HEAD
     phasenet_direc = '/home/javak/phasenet_chile-subduction-zone-main'
     chile_GFZ_online_direc = '/data2/chile/CHILE_COMBINED_2021' 
     export_DF_path = '/home/javak/Sample_data_chile/Comparing PhaseNet and Catalog'
@@ -1672,12 +1789,30 @@ if __name__ == "__main__":
     end_year_analysis = 2021
     end_day_analysis = 365
     analysis = True
+=======
+    phasenet_direc = '/home/javak/phasenet_chile-subduction-zone'
+    chile_GFZ_online_direc = '/data2/chile/CHILE_GFZ_ONLINE'
+    export_DF_path = '/home/javak/Sample_data_chile/Comparing PhaseNet and Catalog'
+    export_mseed_path = '/home/javak/Sample_data_chile/mseed'
+    working_direc = '/home/javak/Sample_data_chile'
+    picks_name = '2012_events.pkl'
+
+    start_year_analysis = 2012
+    start_day_analysis = 1
+    end_year_analysis = 2012
+    end_day_analysis = 1
+    analysis = False
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
 
     apply_filter = False
     freqmin = 0.2
     freqmax = 10
 
+<<<<<<< HEAD
     time_lag_threshold = 100
+=======
+    time_lag_threshold = 2000
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
 
     station_name_list = 'CXstatlist.txt'
 
@@ -1691,6 +1826,7 @@ if __name__ == "__main__":
     
     start_time ="2012-01-01T05:15:38.820000Z"
     dt = 25
+<<<<<<< HEAD
     #result = obj.mismatched_picks(start_time,dt)
     #result = obj.get_stations()
     esult = obj()
@@ -1698,5 +1834,14 @@ if __name__ == "__main__":
     print('precision is \n', precision)
     print('recall is \n', recall)
     print('f1_score is \n', f1_score)
+=======
+    result = obj.mismatched_picks(start_time,dt)
+    #result = obj.get_stations()
+    #result = obj()
+    #precision, recall, f1_score, TPR, FPR = obj.proximity_matrix('P')
+    #print('precision is \n', precision)
+    #print('recall is \n', recall)
+    #print('f1_score is \n', f1_score)
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
 
 

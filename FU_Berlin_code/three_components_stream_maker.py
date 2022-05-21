@@ -10,6 +10,7 @@ def generate_DF_file_path (chile_GFZ_online_traj, export_fig_path):
     for path,subdir,files in os.walk(chile_GFZ_online_traj):
         #for name_dir in subdir:
             #folder = os.path.join(path,name_dir) # will print path of directories
+<<<<<<< HEAD
         for file_name in files:
             if  file_name.startswith('.') == False: 
                 path_name = os.path.join(path,file_name) # will print path of files
@@ -18,6 +19,14 @@ def generate_DF_file_path (chile_GFZ_online_traj, export_fig_path):
     df = pd.DataFrame(data, columns=['path', 'file_name'])
     df = df.sort_values(by='path', ascending=True)
     #df = df.drop([81313,81717])
+=======
+        for file_name in files:    
+            path_name = os.path.join(path,file_name) # will print path of files
+            data.append((path_name, file_name))
+    # creat DataFrame
+    df = pd.DataFrame(data, columns=['path', 'file_name'])
+
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
     # Split the file_name column
     days_df = df['file_name'].str.split('.', -1, expand=True)
     days_df = days_df.rename(columns = {0:'network',1:'station',3:'stream_component',5:'year',6:'day'})
@@ -69,6 +78,7 @@ def DF_path (DF_chile_path,start_year_analysis, start_day_analysis, end_year_ana
 
 if __name__ == "__main__":
 
+<<<<<<< HEAD
     chile_GFZ_online_traj = '/data2/chile/CHILE_COMBINED_2021'
     export_fig_path = '/home/javak/Sample_data_chile/Comparing PhaseNet and Catalog'
     start_year_analysis = 2006
@@ -78,3 +88,14 @@ if __name__ == "__main__":
 
     generate_DF_file_path (chile_GFZ_online_traj,export_fig_path)
     #DF_path (export_fig_path, start_year_analysis, start_day_analysis, end_year_analysis, end_day_analysis)
+=======
+    chile_GFZ_online_traj = '/data2/chile/CHILE_GFZ_ONLINE'
+    export_fig_path = '/home/javak/Sample_data_chile/Comparing PhaseNet and Catalog'
+    start_year_analysis = 2014
+    start_day_analysis = 5
+    end_year_analysis = 2014
+    end_day_analysis = 6
+
+    #generate_DF_file_path (chile_GFZ_online_traj,export_fig_path)
+    DF_path (export_fig_path, start_year_analysis, start_day_analysis, end_year_analysis, end_day_analysis)
+>>>>>>> a269d22241d38276635c4690ddd036a66b3e45e6
