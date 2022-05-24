@@ -398,17 +398,17 @@ class PhaseNet_Analysis (object):
             
             # choosing the right interval and take the maximum amplitude within 5 seconds interval for each trace
             if index_p_0 < times_0.shape[0] - 50:
-                amp_p_0 = np.absolute(stream[0].data[index_p_0:index_p_0+50]).max()
+                amp_p_0 = np.max(np.absolute(stream[0].data[index_p_0:index_p_0+50]), initial=0)
             else:
                 amp_p_0 = 0
 
             if index_p_1 < times_1.shape[0] - 50:
-                amp_p_1 = np.absolute(stream[1].data[index_p_1:index_p_1+50]).max()            
+                amp_p_1 = np.max(np.absolute(stream[1].data[index_p_1:index_p_1+50]), initial=0)          
             else:
                 amp_p_1 = 0
             
             if index_p_2 < times_2.shape[0] - 50:
-                amp_p_2 = np.absolute(stream[2].data[index_p_2:index_p_2+50]).max()
+                amp_p_2 = np.max(np.absolute(stream[2].data[index_p_2:index_p_2+50]), initial=0)
             else:
                 amp_p_2 = 0
 
@@ -454,9 +454,10 @@ class PhaseNet_Analysis (object):
                 
                 if check_tr_0.shape[0] !=0:
                     inx_0 = np.searchsorted(times_0, check_tr_0)
-                    amp_s_0 = np.absolute(stream[0].data[index_s_0:inx_0[0]]).max()
+                    amp_s_0 = np.max(np.absolute(stream[0].data[index_s_0:inx_0[0]]),initial=0)
                 else:
-                    amp_s_0 = np.absolute(stream[0].data[index_s_0:index_s_0+150]).max()
+                    amp_s_0 = np.max(np.absolute(stream[0].data[index_s_0:index_s_0+150]), initial=0)
+
             else:
                 amp_s_0 = 0
 
@@ -467,9 +468,9 @@ class PhaseNet_Analysis (object):
                 
                 if check_tr_1.shape[0] !=0:
                     inx_1 = np.searchsorted(times_1, check_tr_1)
-                    amp_s_1 = np.absolute(stream[1].data[index_s_1:inx_1[0]]).max()
+                    amp_s_1 = np.max(np.absolute(stream[1].data[index_s_1:inx_1[0]]),initial=0)
                 else:
-                    amp_s_1 = np.absolute(stream[1].data[index_s_1:index_s_1+150]).max()
+                    amp_s_1 = np.max(np.absolute(stream[1].data[index_s_1:index_s_1+150]),initial=0)
             else:
                 amp_s_1 = 0
 
@@ -480,9 +481,9 @@ class PhaseNet_Analysis (object):
                 
                 if check_tr_2.shape[0] !=0:
                     inx_2 = np.searchsorted(times_2, check_tr_2)
-                    amp_s_2 = np.absolute(stream[2].data[index_s_2:inx_2[0]]).max()
+                    amp_s_2 = np.max(np.absolute(stream[2].data[index_s_2:inx_2[0]]),initial=0)
                 else:
-                    amp_s_2 = np.absolute(stream[2].data[index_s_2:index_s_2+150]).max()
+                    amp_s_2 = np.max(np.absolute(stream[2].data[index_s_2:index_s_2+150]),initial=0)
             else:
                 amp_s_2 = 0
 
@@ -1716,9 +1717,9 @@ if __name__ == "__main__":
     working_direc = '/home/javak/Sample_data_chile'
     picks_name = 'picks_2007_2020.pkl'
 
-    start_year_analysis = 2006
+    start_year_analysis = 2012
     start_day_analysis = 1
-    end_year_analysis = 2021
+    end_year_analysis = 2012
     end_day_analysis = 365
     analysis = True
 
