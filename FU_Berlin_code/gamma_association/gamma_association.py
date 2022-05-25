@@ -77,3 +77,46 @@ config["max_sigma12"] = 1.0
 
 for k, v in config.items():
     print(f"{k}: {v}")
+
+
+
+
+
+
+pbar = tqdm(sorted(list(set(picks["time_idx"]))))
+event_idx0 = 0 ## current earthquake index
+assignments = []
+if (len(picks) > 0) and (len(picks) < 5000):
+    catalogs, assignments = association(picks, stations, config, event_idx0, config["method"], pbar=pbar)
+    event_idx0 += len(catalogs)
+else:
+    catalogs = []
+    for i, hour in enumerate(pbar):
+        picks_ = picks[picks["time_idx"] == hour]
+        if len(picks_) == 0:
+            continue
+        catalog, assign = association(picks_, stations, config, event_idx0, config["method"], pbar=pbar)
+        event_idx0 += len(catalog)
+        catalogs.extend(catalog)
+        assignments.extend(assign)
+
+## create catalog
+catalogs = pd.DataFrame(catalogs, columns=["time(s)"]+config["dims"]+["magnitude", "sigma_time", "sigma_amp", "cov_time_amp",  "event_idx", "prob_gamma"])
+catalogs["time"] = catalogs["time(s)"].apply(lambda x: from_seconds(x))
+catalogs["longitude"] = catalogs["x(km)"].apply(lambda x: x/config["degree2km"] + config["center"][0])
+catalogs["latitude"] = catalogs["y(km)"].apply(lambda x: x/config["degree2km"] + config["center"][1])
+catalogs["depth(m)"] = catalogs["z(km)"].apply(lambda x: x*1e3)
+with open(catalog_csv, 'w') as fp:
+    catalogs.to_csv(fp, sep="\t", index=False, 
+                    float_format="%.3f",
+                    date_format='%Y-%m-%dT%H:%M:%S.%f',
+                    columns=["time", "magnitude", "longitude", "latitude", "depth(m)", "sigma_time", "sigma_amp", "cov_time_amp", "event_idx", "prob_gamma"])
+catalogs = catalogs[['time', 'magnitude', 'longitude', 'latitude', 'depth(m)', 'sigma_time', 'sigma_amp', 'prob_gamma']]
+
+## add assignment to picks
+assignments = pd.DataFrame(assignments, columns=["pick_idx", "event_idx", "prob_gamma"])
+picks = picks.join(assignments.set_index("pick_idx")).fillna(-1).astype({'event_idx': int})
+with open(picks_csv, 'w') as fp:
+    picks.to_csv(fp, sep="\t", index=False, 
+                    date_format='%Y-%m-%dT%H:%M:%S.%f',
+                    columns=["id", "timestamp", "type", "prob", "amp", "event_idx", "prob_gamma"])
