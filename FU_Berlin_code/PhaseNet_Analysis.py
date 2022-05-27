@@ -169,10 +169,12 @@ class PhaseNet_Analysis (object):
                 df_P_picks = pd.concat([df_P_picks, p_picks], axis=0)
 
             # save PhaseNet p picks result file in the export directory as 'PhaseNet_result_p_picks.pkl'
-            df_P_picks.to_pickle(os.path.join(self.export_DF_path, 'PhaseNet_result_p_picks.pkl'))
+            name_p_picks = '{0}.{1}.{2}.{3}.{4}.{5}'.format(self.start_year_analysis,self.start_day_analysis,self.end_year_analysis,self.end_day_analysis,'p_picks','pkl')
+            df_P_picks.to_pickle(os.path.join(self.export_DF_path, name_p_picks))
 
             # save PhaseNet s picks result file in the export directory as 'PhaseNet_result_s_picks.pkl'
-            df_S_picks.to_pickle(os.path.join(self.export_DF_path, 'PhaseNet_result_s_picks.pkl'))
+            name_s_picks = '{0}.{1}.{2}.{3}.{4}.{5}'.format(self.start_year_analysis,self.start_day_analysis,self.end_year_analysis,self.end_day_analysis,'s_picks','pkl')
+            df_S_picks.to_pickle(os.path.join(self.export_DF_path, name_s_picks))
 
             # Apply filter on catalog data between start time and end time of analysis
             catalog_DF_P_picks, catalog_DF_S_picks = self.filter_picks_DF ()
@@ -185,11 +187,13 @@ class PhaseNet_Analysis (object):
 
             # Perform visulization & qaulity control of P picks
             # The results of visulization will be found at self.export_DF_path directory
-            self.compare_PhaseNet_catalog_P_picks()
+
+            #self.compare_PhaseNet_catalog_P_picks()
 
             # Perform visulization & qaulity control of S picks
             # The results of visulization will be found at self.export_DF_path directory
-            self.compare_PhaseNet_catalog_S_picks()
+
+            #self.compare_PhaseNet_catalog_S_picks()
         
 
         # Perform visulization without running PhaseNet
@@ -197,12 +201,12 @@ class PhaseNet_Analysis (object):
 
             # Perform visulization & qaulity control of P picks
             # The results of visulization will be found at self.export_DF_path directory
-            self.compare_PhaseNet_catalog_P_picks()
+            #self.compare_PhaseNet_catalog_P_picks()
 
             # Perform visulization & qaulity control of S picks
             # The results of visulization will be found at self.export_DF_path directory
 
-            self.compare_PhaseNet_catalog_S_picks()      
+            #self.compare_PhaseNet_catalog_S_picks()      
    
     
     def DF_path (self):
